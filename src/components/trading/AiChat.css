@@ -1,0 +1,293 @@
+.aichat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 260px);
+  min-height: 500px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8ecf1;
+  overflow: hidden;
+}
+
+.aichat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8ecf1;
+  background: #f7f9fb;
+}
+
+.aichat-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #2c3e50;
+}
+
+.aichat-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aichat-btn {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  background: #fff;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aichat-btn:hover {
+  background: #edf2f7;
+}
+
+.aichat-btn-active {
+  background: #4a7ab5;
+  color: #fff;
+  border-color: #4a7ab5;
+}
+
+.aichat-config {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8ecf1;
+  background: #fafbfc;
+}
+
+.aichat-config-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.aichat-preset-btn {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border: 1px solid #d1d9e0;
+  border-radius: 4px;
+  background: #fff;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aichat-preset-btn:hover {
+  background: #e2e8f0;
+  border-color: #4a7ab5;
+}
+
+.aichat-config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.aichat-config-row label {
+  width: 100px;
+  font-size: 0.8rem;
+  color: #5a6c7d;
+  flex-shrink: 0;
+}
+
+.aichat-config-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d1d9e0;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: #2c3e50;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.aichat-config-row input:focus {
+  border-color: #4a7ab5;
+}
+
+.aichat-config-hint {
+  font-size: 0.75rem;
+  color: #8a9ab0;
+  margin-top: 4px;
+}
+
+.aichat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.aichat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8a9ab0;
+  gap: 12px;
+}
+
+.aichat-empty-icon {
+  font-size: 2rem;
+}
+
+.aichat-empty p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.aichat-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.aichat-action-btn {
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  border: 1px solid #4a7ab5;
+  border-radius: 8px;
+  background: #4a7ab5;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.aichat-action-btn:hover {
+  background: #3d6999;
+}
+
+.aichat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 480px;
+}
+
+.aichat-suggestion {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d9e0;
+  border-radius: 16px;
+  background: #f7f9fb;
+  color: #4a7ab5;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aichat-suggestion:hover {
+  background: #e8f0f8;
+  border-color: #4a7ab5;
+}
+
+.aichat-msg {
+  margin-bottom: 16px;
+  max-width: 85%;
+}
+
+.aichat-msg-user {
+  margin-left: auto;
+}
+
+.aichat-msg-assistant {
+  margin-right: auto;
+}
+
+.aichat-msg-label {
+  font-size: 0.7rem;
+  color: #8a9ab0;
+  margin-bottom: 4px;
+}
+
+.aichat-msg-user .aichat-msg-label {
+  text-align: right;
+}
+
+.aichat-msg-content {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.aichat-msg-user .aichat-msg-content {
+  background: #4a7ab5;
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.aichat-msg-assistant .aichat-msg-content {
+  background: #f0f4f8;
+  color: #2c3e50;
+  border-bottom-left-radius: 2px;
+}
+
+.aichat-input-area {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #e8ecf1;
+  background: #fafbfc;
+  align-items: flex-end;
+}
+
+.aichat-input-area textarea {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d9e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #2c3e50;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.aichat-input-area textarea:focus {
+  border-color: #4a7ab5;
+}
+
+.aichat-input-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aichat-send-btn {
+  padding: 8px 20px;
+  background: #4a7ab5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.aichat-send-btn:hover:not(:disabled) {
+  background: #3d6999;
+}
+
+.aichat-send-btn:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+}
+
+.aichat-stop-btn {
+  background: #e74c3c;
+}
+
+.aichat-stop-btn:hover {
+  background: #c0392b;
+}
