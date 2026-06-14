@@ -1,0 +1,42 @@
+.skeleton-box {
+  background: linear-gradient(90deg, #e8edf3 25%, #f4f7fb 37%, #e8edf3 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+.skeleton-mt {
+  margin-top: 8px;
+}
+
+.skeleton-stat-card {
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  min-height: 80px;
+}
+
+.skeleton-account-card {
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-box {
+    animation: none;
+    background: #e8edf3;
+  }
+}

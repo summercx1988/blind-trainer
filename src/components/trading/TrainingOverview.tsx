@@ -5,6 +5,7 @@ import ReplayChart from './history/ReplayChart'
 import type { ReplayAction } from './history/ReplayChart'
 import type { TrainingProfile } from './blind-workbench/ProfileManager'
 import { CloseIcon } from '../common/Icons'
+import { SkeletonStatCard, SkeletonAccountCard } from '../common/Skeleton'
 import './TrainingOverview.css'
 import '../../types/global.d'
 
@@ -485,7 +486,19 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
   const hasData = dataStats && dataStats.stockCount > 0
 
   if (loading) {
-    return <div className="overview-page"><div className="overview-loading">加载中...</div></div>
+    return (
+      <div className="overview-page">
+        <div className="overview-skeleton-grid">
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <SkeletonAccountCard />
+        </div>
+      </div>
+    )
   }
 
   return (
