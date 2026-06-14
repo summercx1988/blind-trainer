@@ -552,26 +552,6 @@
   gap: 12px;
 }
 
-.wt-training-body {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 12px;
-  align-items: start;
-}
-
-.wt-training-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-@media (max-width: 1024px) {
-  .wt-training-body {
-    grid-template-columns: 1fr;
-  }
-}
-
 .wt-settings-bar {
   background: #f7f9fb;
   border: 1px solid #e8ecf1;

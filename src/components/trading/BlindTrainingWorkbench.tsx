@@ -1052,7 +1052,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           />
 
           {activeSample && currentBar && sessionStatus === 'running' && (
-            <div className="wt-training-body">
+            <>
               <AccountOverview
                 account={account}
                 accountEquity={accountEquity}
@@ -1066,19 +1066,17 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 onIncreaseVisibleCount={() => setVisibleCount((value) => Math.min(200, value + 10))}
               />
 
-              <div className="wt-training-side">
-                <ActionSection
-                  actionPending={actionPending}
-                  accountShares={account.shares}
-                  actionError={actionError}
-                  onActionClick={handleActionClick}
-                  onNextBar={() => void handleStepForward()}
-                  onSwitchSample={() => void handleSwitchSample()}
-                />
+              <ActionSection
+                actionPending={actionPending}
+                accountShares={account.shares}
+                actionError={actionError}
+                onActionClick={handleActionClick}
+                onNextBar={() => void handleStepForward()}
+                onSwitchSample={() => void handleSwitchSample()}
+              />
 
-                <ActionLog actions={actions} />
-              </div>
-            </div>
+              <ActionLog actions={actions} />
+            </>
           )}
 
           {!activeSample && dataReady && !sampleLoading && (
