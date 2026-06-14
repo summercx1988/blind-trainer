@@ -152,10 +152,12 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
   const [deleteError, setDeleteError] = useState('')
 
   // Session detail state (from TrainingHistory)
-  const [periodFilter, setPeriodFilter] = useState<'all' | '5m' | '15m' | '1d'>('all')
+  const [periodFilter, setPeriodFilter] = useState<'all' | '1d'>('all')
   const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('30d')
   const [keyword, setKeyword] = useState('')
+  const [sortMode, setSortMode] = useState<'time' | 'pnl'>('time')
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<string>('')
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailActions, setDetailActions] = useState<SessionActionRecord[]>([])
@@ -207,7 +209,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
     ? Number(activeProfile.current_capital || 0) - Number(activeProfile.initial_capital || 0)
     : 0
 
-  // Apply filters + sort (from TrainingHistory, enhanced)
+  // Apply filters + sort
   const filteredSessions = useMemo(() => {
     const now = Date.now()
     const keywordLower = keyword.trim().toLowerCase()
@@ -223,6 +225,12 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
           : 90 * 24 * 60 * 60 * 1000
         if (diff > maxAge) return false
       }
+      if (calendarSelectedDate) {
+        const startedAt = toMillis(session.started_at)
+        if (!startedAt) return false
+        const sessionDate = toDateKey(new Date(startedAt))
+        if (sessionDate !== calendarSelectedDate) return false
+      }
       if (keywordLower) {
         const text = `${session.stock_code} ${session.stock_name || ''}`.toLowerCase()
         if (!text.includes(keywordLower)) return false
@@ -231,11 +239,16 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
     })
 
     return filtered.sort((a, b) => {
-      const aPct = toSessionPnlPct(a)
-      const bPct = toSessionPnlPct(b)
-      return sortOrder === 'desc' ? bPct - aPct : aPct - bPct
+      if (sortMode === 'pnl') {
+        const aPct = toSessionPnlPct(a)
+        const bPct = toSessionPnlPct(b)
+        return sortOrder === 'desc' ? bPct - aPct : aPct - bPct
+      }
+      const aTime = toMillis(a.started_at) || 0
+      const bTime = toMillis(b.started_at) || 0
+      return sortOrder === 'desc' ? bTime - aTime : aTime - bTime
     })
-  }, [profileSessions, periodFilter, dateFilter, keyword, sortOrder])
+  }, [profileSessions, periodFilter, dateFilter, keyword, sortOrder, sortMode, calendarSelectedDate])
 
   // Top 3 best/worst from finished sessions
   const topBest = useMemo(() => {
@@ -359,6 +372,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
         const activity = dayMap.get(dateStr)
         const isToday = dateStr === today
         const color = activity ? getColor(activity.avgPnlPct) : '#f0f3f1'
+        const isSelected = calendarSelectedDate === dateStr
         cells.push(
           <rect
             key={dateStr}
@@ -368,17 +382,18 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
             height={CELL_SIZE}
             rx={3}
             fill={color}
-            stroke={isToday ? '#132238' : activity ? 'rgba(19, 34, 56, 0.16)' : 'rgba(19, 34, 56, 0.06)'}
-            strokeWidth={isToday ? 2 : 1}
+            stroke={isSelected ? '#132238' : isToday ? '#132238' : activity ? 'rgba(19, 34, 56, 0.16)' : 'rgba(19, 34, 56, 0.06)'}
+            strokeWidth={isSelected || isToday ? 2.5 : 1}
             onMouseEnter={(e) => handleCellHover(dateStr, e)}
             onMouseLeave={handleCellLeave}
+            onClick={() => activity && setCalendarSelectedDate(isSelected ? '' : dateStr)}
             style={{ cursor: activity ? 'pointer' : 'default' }}
           />
         )
       }
     })
     return cells
-  }, [weeks, dayMap, today, handleCellHover, handleCellLeave])
+  }, [weeks, dayMap, today, calendarSelectedDate, handleCellHover, handleCellLeave])
 
   // Session detail handlers
   const handleOpenSession = useCallback(async (sessionId: string) => {
@@ -513,7 +528,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
             </div>
           ) : (
             <div className="ov-data-info">
-              已入库 {dataStats.stockCount} 只 · 日线 {dataStats.dailyCount.toLocaleString()} · 15m {dataStats.m15Count.toLocaleString()} · 5m {dataStats.m5Count.toLocaleString()}
+              已入库 {dataStats.stockCount} 只 · 日线 {dataStats.dailyCount.toLocaleString()} 条
             </div>
           )}
         </div>
@@ -795,9 +810,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
               <div className="ov-filters-inline">
                 <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value as typeof periodFilter)}>
                   <option value="all">全部周期</option>
-                  <option value="5m">5m</option>
-                  <option value="15m">15m</option>
-                  <option value="1d">1d</option>
+                  <option value="1d">日线</option>
                 </select>
                 <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}>
                   <option value="all">全部时间</option>
@@ -808,10 +821,27 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
                 <input className="ov-search-input" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="搜索股票..." />
                 <button
                   className="ov-btn ov-btn-ghost ov-btn-sm"
-                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                  onClick={() => {
+                    if (sortMode === 'time') {
+                      if (sortOrder === 'desc') setSortOrder('asc')
+                      else { setSortMode('pnl'); setSortOrder('desc') }
+                    } else {
+                      if (sortOrder === 'desc') setSortOrder('asc')
+                      else { setSortMode('time'); setSortOrder('desc') }
+                    }
+                  }}
+                  aria-label="切换排序方式"
                 >
-                  收益率{sortOrder === 'desc' ? '↓' : '↑'}
+                  {sortMode === 'time' ? '时间' : '收益率'}{sortOrder === 'desc' ? '↓' : '↑'}
                 </button>
+                {calendarSelectedDate && (
+                  <button
+                    className="ov-btn ov-btn-ghost ov-btn-sm ov-calendar-clear"
+                    onClick={() => setCalendarSelectedDate('')}
+                  >
+                    清除日期筛选
+                  </button>
+                )}
               </div>
             </div>
           </div>

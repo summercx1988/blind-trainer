@@ -8,6 +8,16 @@
   gap: 0.85rem;
 }
 
+.ov-calendar-clear {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.ov-calendar-panel .ov-calendar-svg rect:hover {
+  filter: brightness(1.15);
+}
+
 .overview-loading {
   text-align: center;
   padding: 60px 0;
