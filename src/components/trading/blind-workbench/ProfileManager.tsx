@@ -56,12 +56,12 @@ const CELL_GAP = 3
 const CELL_STEP = CELL_SIZE + CELL_GAP
 
 const PNL_LEVELS = [
-  { max: -2, color: '#ef5350', label: '亏损 ≥2%' },
-  { max: -0.5, color: '#ef9a9a', label: '亏损 0.5%-2%' },
+  { max: -2, color: '#1b7e3e', label: '亏损 ≥2%' },
+  { max: -0.5, color: '#a5d6a7', label: '亏损 0.5%-2%' },
   { max: 0, color: '#e0e0e0', label: '持平' },
-  { max: 0.5, color: '#a5d6a7', label: '盈利 0-0.5%' },
-  { max: 2, color: '#66bb6a', label: '盈利 0.5%-2%' },
-  { max: Infinity, color: '#2e7d32', label: '盈利 ≥2%' }
+  { max: 0.5, color: '#f5b7b1', label: '盈利 0-0.5%' },
+  { max: 2, color: '#e74c3c', label: '盈利 0.5%-2%' },
+  { max: Infinity, color: '#c0392b', label: '盈利 ≥2%' }
 ]
 
 const getColor = (avgPnlPct: number): string => {
