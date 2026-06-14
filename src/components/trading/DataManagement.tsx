@@ -23,7 +23,7 @@ const DataManagement = () => {
   const [gapLoading, setGapLoading] = useState(false)
   const [backfilling, setBackfilling] = useState(false)
   const [syncCount, setSyncCount] = useState(0)
-  const [syncPeriods, setSyncPeriods] = useState<string[]>(['daily', '15m'])
+  const [syncPeriods, setSyncPeriods] = useState<string[]>(['daily'])
   const [activeTab, setActiveTab] = useState<DataManagementTab>('sync')
   const [autoSyncStatus, setAutoSyncStatus] = useState<{ lastSyncAt: string | null; nextSyncAt: string; syncing: boolean; syncType: string; syncError: string | null } | null>(null)
   const [gapSummary, setGapSummary] = useState<MissingCoverageData | null>(null)

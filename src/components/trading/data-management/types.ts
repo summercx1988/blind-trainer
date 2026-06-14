@@ -27,9 +27,9 @@ export const SYNC_STRATEGIES: SyncStrategy[] = [
   {
     id: 'full_update',
     label: '全量增量更新',
-    description: '更新所有股票最新日线和15m数据，建议每日收盘后执行。',
+    description: '更新所有股票最新日线数据，建议每日收盘后执行。',
     count: 0,
-    periods: ['daily', '15m']
+    periods: ['daily']
   },
   {
     id: 'daily_fast',
@@ -40,9 +40,9 @@ export const SYNC_STRATEGIES: SyncStrategy[] = [
   },
   {
     id: 'blind_training',
-    label: '盲训推荐（日线+15m）',
+    label: '盲训推荐（日线）',
     description: '优先覆盖盲训样本，兼顾训练效率。',
     count: 20,
-    periods: ['daily', '15m']
+    periods: ['daily']
   }
 ]

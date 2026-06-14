@@ -1,4 +1,4 @@
-export type PeriodType = '5m' | '15m' | '1d'
+export type PeriodType = '1d'
 export type SessionStatus = 'idle' | 'running' | 'finished'
 
 export type RegimeType = 'uptrend' | 'downtrend' | 'sideways' | 'volatile' | 'mixed' | 'fallback'

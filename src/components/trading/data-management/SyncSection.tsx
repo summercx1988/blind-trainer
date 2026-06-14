@@ -65,8 +65,7 @@ interface SyncSectionProps {
 }
 
 const PERIOD_OPTIONS = [
-  { value: 'daily', label: '日线' },
-  { value: '15m', label: '15分钟' }
+  { value: 'daily', label: '日线' }
 ]
 
 const toCoveragePct = (covered: number, total: number): string => {

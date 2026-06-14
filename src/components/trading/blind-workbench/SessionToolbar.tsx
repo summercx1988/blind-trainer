@@ -100,7 +100,7 @@ const SettingsPanel = ({
         <div className="wt-filter-group">
           <span className="wt-filter-label">周期</span>
           <div className="wt-period-btns">
-            {(['5m', '15m', '1d'] as PeriodType[]).map((item) => (
+            {(['1d'] as PeriodType[]).map((item) => (
               <button
                 key={item}
                 className={`wt-period-btn ${draftSettings.period === item ? 'active' : ''}`}
