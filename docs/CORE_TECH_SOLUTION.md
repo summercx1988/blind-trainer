@@ -1,213 +1,126 @@
-# 核心技术方案（双子系统并行）
+# 盲训 App 核心技术方案
 
-**版本：** v1.2  
-**日期：** 2026-04-15  
-**状态：** 与当前代码对齐
+**版本：** v2.0（拆分后重写）
+**状态：** 当前实现对应方案
+**日期：** 2026-06-14
 
-## 1. 技术目标
+## 0. 关于本文档
 
-在一个 Electron 桌面应用中承载两个平行子系统，并保持共享底座、业务闭环独立：
+本文档服务于**盲训独立 App**（仓库 [summercx1988/blind-trainer](https://github.com/summercx1988/blind-trainer)）。
 
-1. 盲训子系统：提升主观决策能力。
-2. 模型训练子系统：因子候选 + 人审 + 训练 + 信号提醒。
+历史双子系统技术方案见 [archive/2026-06-split/quant-removed/CORE_TECH_SOLUTION.md](archive/2026-06-split/quant-removed/CORE_TECH_SOLUTION.md)（仅作历史参考）。
 
-核心原则：
+---
 
-1. 子系统边界清晰。
-2. IPC 契约可追溯且类型一致。
-3. 数据可复算、可回放、可审计。
+## 1. 设计原则
 
-## 2. 当前落地架构（代码级）
+1. **信息遮蔽** — Renderer 永远拿不到"未来 K 线"
+2. **不自动同步** — 行情库只跟用户手动
+3. **本地优先** — 所有数据本地 SQLite，不上云
+4. **可复现** — 给定起点 + K 线序列，结果可重放
+5. **可量化** — 每个动作 / 收益可被记录与统计
 
-```text
-Renderer (React)
-├── App Shell (src/App.tsx)
-│   ├── Dashboard (src/components/trading/Dashboard.tsx)
-│   ├── Blind Training (src/components/trading/BlindTrainingWorkbench.tsx)
-│   ├── Training History (src/components/trading/TrainingHistory.tsx)
-│   ├── Model Training (src/components/trading/ModelTrainingWorkbench.tsx)
-│   └── Data Management (src/components/trading/DataManagement.tsx)
-├── blind domain
-│   ├── types.ts
-│   ├── sampleFactory.ts
-│   └── tradingEngine.ts
-└── history
-    └── ReplayChart.tsx
+## 2. 关键技术决策
 
-Preload (src/preload/index.ts)
-├── db.*
-├── labeling.*
-├── simulation.*
-├── modeling.*
-└── data.*
+### 2.1 渲染层 K 线分片传输
 
-Main Process (src/main)
-├── ipc/blind.ts
-├── ipc/model.ts
-├── ipc/modelDbLabelingIpc.ts
-├── ipc/modelDatasetIpc.ts
-├── ipc/modelResearchIpc.ts
-├── ipc/modelSignalRetrainingIpc.ts
-├── ipc/modelDatasetPolicyStore.ts
-├── ipc/modelFactorCandidateService.ts
-├── ipc/modelSignalInferenceService.ts
-├── ipc/modelFeedbackRetrainingService.ts
-├── ipc/data.ts
-├── services/market-data.ts
-└── db.ts
+**问题**：如果把整段 K 线（比如 1530 根）一次传给 Renderer，前端 store 缓存后就能"偷看"未来。
 
-Storage
-├── SQLite (会话、动作、标签、候选、数据集、模型、提醒、反馈、再训练)
-├── Filesystem (特征产物、模型文件、评估报告)
-└── seed.db / 本地增量同步缓存
-```
+**方案**：
+- Main 端维护 `current_bar_index`
+- 每次 `advanceBar` IPC，Main 返回**当前及之前**的 K 线数组
+- 复盘阶段（`endSession`）才返回 `current_idx+1..end` 段
+- Renderer 端 **store 不缓存未揭示 K 线**
 
-## 3. 子系统边界
+**代码**：[src/main/ipc/blind.ts](../src/main/ipc/blind.ts) `advanceBar` / `endSession` handler。
 
-### 3.0 当前前台信息架构
+### 2.2 行情库种子加载
 
-1. `训练总览`：全局状态与快捷入口。
-2. `盲训工作台`：盲训主执行面板。
-3. `训练复盘`：盲训历史筛选、动作明细、回放查看。
-4. `模型训练`：候选审核到训练评估的完整工作台。
-5. `数据管理`：真实行情底座初始化与同步。
+**问题**：用户首次启动时数据库是空的，需要拉数据。如果走网络同步会非常慢（几千只股票 × 5 年日线）。
 
-### 3.1 盲训子系统（独立闭环）
+**方案**：
+- 打包 `data/blind-seed.db`（735MB，597 万行日线）
+- 首次启动检测到 seed + userData 空 → 直接复制 seed 到 userData
+- 复制过程约 30 秒（SSD），远比网络拉取快
 
-依赖：
+**代码**：[src/main/services/seed-loader.ts](../src/main/services/seed-loader.ts)。
 
-1. `data:getRandomSamples` / `data:getKline`
-2. `db:saveSession` / `db:saveTradeAction` / `db:finishSession`
-3. `db:getSessionReview` / `db:listSessions`
+### 2.3 关闭 auto-sync
 
-不依赖：
+**问题**：原本量化 App 每天 15:15 自动同步行情。盲训不需要，且自动同步会污染"训练中的 K 线边界"。
 
-1. 候选因子生成与审核流程
-2. 模型训练与激活流程
+**方案**：
+- 注释掉 [src/main/index.ts](../src/main/index.ts) 中的 `startAutoSync()`
+- 用户需要更新行情时，进入「数据管理」页手动点击
 
-### 3.2 模型训练子系统（独立闭环）
+**commit**：`2a93311 refactor: 关闭盲训 App auto-sync`
 
-依赖：
+### 2.4 数据隔离（与量化 App）
 
-1. `modeling:*` 全链路（候选、审核、数据集、训练、评估、提醒、反馈、再训练）
-2. `data:sync` / `data:getStockList` 等数据能力
+**问题**：如果两个 App 共享同一个 `stock-trading.db`，量化 App 的 15:15 同步可能"修改"盲训正在用的 K 线。
 
-不依赖：
+**方案**：
+- 盲训 `package.json` name = `blind-trainer`
+- userData 路径 = `~/Library/Application Support/blind-trainer/`
+- 行情库 = userData + `/stock-trading.db`（**仅盲训使用**）
+- 与量化 App 的 `~/Library/Application Support/stock-trading-simulator/stock-trading.db` 完全独立
 
-1. 盲训会话执行状态机
+### 2.5 随机起点抽取
 
-## 4. IPC 契约现状（与代码一致）
+**问题**：怎么保证起点是真随机？避免用户"刷出好牌"。
 
-### 4.1 `db:*`
+**方案**：
+- 起点 = (随机 code, 随机 start_date)
+- code 从 `stock_list` 等概率抽
+- start_date 从 [2020-01-02, 2026-04-28] 等概率抽
+- 后续 60 个交易日作为训练区间
+- 服务端不记忆用户偏好（每次都是独立随机）
 
-1. `getStatistics`
-2. `saveSession`
-3. `finishSession`
-4. `saveTradeAction`
-5. `saveLabel`
-6. `updateLabelStatus`
-7. `getSessionLabels`
-8. `getSessionActions`
-9. `getSessionReview`
-10. `exportLabelsCSV`
-11. `listSessions`
+**代码**：[src/main/ipc/blind.ts](../src/main/ipc/blind.ts) `startSession` handler。
 
-### 4.2 `simulation:*`
+## 3. 性能要点
 
-1. `startSession`
-2. `getSession`
-3. `applyAction`
-4. `step`
-5. `finish`
-6. `getReview`
+| 场景 | 性能要求 | 实现方式 |
+| --- | --- | --- |
+| 首次启动 + 种子加载 | < 60s | 直接复制 SQLite 文件 + WAL 模式 |
+| 行情查询（单股全段） | < 100ms | `(code, trade_date)` 复合主键 + 索引 |
+| 训练会话启动 | < 500ms | 内存预热 stock_list，K 线 lazy 加载 |
+| 推进一根 K 线 | < 50ms | 只查 [start, current] 段 |
+| 复盘 | < 200ms | 一次性查后续段，前端图表渲染 |
 
-### 4.3 `labeling:*`
+## 4. 安全 / 边界
 
-1. `runTask`
-2. `getTask`
-3. `listTasks`
-4. `getResults`
-5. `getSummary`
+| 维度 | 边界 |
+| --- | --- |
+| **网络访问** | 行情同步（手动触发） |
+| **文件系统** | 仅 userData + `data/blind-seed.db` |
+| **数据库写入** | 仅 Main 进程可写，Renderer 只读 |
+| **跨进程** | 严格走 `contextBridge`，不暴露 node 模块 |
+| **用户数据** | 一切本地，不上云 |
 
-### 4.4 `modeling:*`
+## 5. 已知约束 / 后续优化
 
-覆盖：候选生成/审核、数据集版本治理、特征构建、模型训练、评估、激活、推理、反馈与再训练。
+| 约束 | 现状 | 后续方向 |
+| --- | --- | --- |
+| K 线只有日线 | 无 15m / 5m | 训练节奏允许后续扩展 |
+| 单机本地 | 无多端同步 | 暂不需要（"盲"训是单兵训练） |
+| 行情库只手动同步 | 风险：忘记更新 | 后续加"启动时提示数据陈旧度" |
+| 不支持多用户档案 | 单用户 | 待产品验证后增加 |
 
-### 4.5 `data:*`
+## 6. 与量化 App 的对比
 
-1. `init`
-2. `sync`
-3. `getKline`
-4. `getRandomSamples`
-5. `getStockList`
-6. `getStats`
-7. `syncKline`
-8. `batchSync`
-9. `getCandles`
+| 维度 | 量化 App | 盲训 App（这里） |
+| --- | --- | --- |
+| K 线类型 | 日线 + 15m + 5m | 仅日线 |
+| 数据更新 | 自动 15:15 + 手动 | 仅手动 |
+| 行情库大小 | 20GB | 885MB |
+| 复盘精度 | 时间戳级 | 日级 |
+| 业务关注点 | 模型预测准确度 | 训练盘感 |
 
-## 5. 数据模型现状（SQLite）
+## 7. 相关文档
 
-### 5.1 盲训域
-
-1. `training_sessions`
-2. `trade_actions`
-3. `session_reviews`
-4. `labels`
-
-### 5.2 模型域
-
-1. `signal_candidates`
-2. `candidate_review_logs`
-3. `dataset_versions`
-4. `dataset_items`
-5. `feature_build_tasks`
-6. `model_training_tasks`
-7. `model_versions`
-8. `model_evaluations`
-9. `signal_events`
-10. `signal_feedback`
-11. `retraining_runs`
-12. `dataset_policy_evaluations`
-
-## 6. 本轮已完成的架构治理
-
-1. `App.tsx` 已升级为五模块壳层导航，修复“核心页面存在但无法到达”的产品结构问题。
-2. 壳层 UI 改为统一信息架构：左侧模块导航 + 主工作区 + 快捷切换，降低双子系统切换成本。
-3. `Dashboard.tsx` 补齐快捷入口，不再只服务盲训单线流程。
-4. `preload/index.ts` 从最小映射升级为强类型全量映射，修复 Renderer/Main 接口错配风险。
-5. 盲训模块新增领域分层：
-   - `blind/tradingEngine.ts`：交易规则与结算逻辑
-   - `blind/sampleFactory.ts`：样本归一与回退样本构造
-   - `blind/types.ts`：领域类型
-6. 全局样式基线重置（去模板默认 dark/purple/fixed-width），避免样式污染。
-7. `model.ts` 的 IPC 注册已开始分域拆分：
-   - `modelDbLabelingIpc.ts`
-   - `modelDatasetIpc.ts`
-   - `modelCandidateIpc.ts`
-   - `modelSignalRetrainingIpc.ts`
-8. `signal/retraining` 核心业务函数已下沉到：
-   - `modelFeedbackRetrainingService.ts`
-9. `signal inference + auto scan` 核心函数已下沉到：
-   - `modelSignalInferenceService.ts`
-10. `candidate factor generation` 核心函数已下沉到：
-    - `modelFactorCandidateService.ts`
-11. `dataset policy` 基础存储/推荐逻辑已下沉到：
-    - `modelDatasetPolicyStore.ts`
-12. `window.electronAPI` 的类型声明已与 preload 新增数据接口继续对齐，降低前后端契约漂移。
-13. `DataManagement.tsx` 已拆分为同步面板、股票列表、标注操作等子模块，降低单文件 UI 状态密度，并把标注结果提示从弹窗改为页内反馈。
-14. `BlindTrainingWorkbench.tsx` 已拆分出连续训练状态条、会话工具栏、账户概览、动作面板、结果面板等子组件，交易逻辑继续留在主文件，降低 UI 与状态机耦合。
-
-## 7. 剩余技术债与优化方向
-
-1. `src/main/ipc/model.ts` 已完成候选/推断/再训练下沉，但数据集策略分析、特征构建与训练任务创建仍在单文件，建议继续拆分 `datasetPolicy / featureBuild / trainingTask` service。
-2. `Dashboard / BlindTrainingWorkbench` 仍有继续细分空间，但当前盲训页已完成第一轮组件化，下一步更适合把样本加载、会话状态与动作执行抽成独立 hook。
-3. 当前壳层导航仍使用本地 state 切页，后续可评估轻量 router 或 URL 状态同步，以支持深链接与恢复现场。
-4. 构建仍存在上游插件 warning（`customResolver` / `freeze`），需在依赖升级窗口统一处理。
-5. 回归测试仍以手工 + build 为主，建议补充关键域逻辑自动化测试，优先 `tradingEngine` 与模型侧纯函数。
-
-## 8. 迭代建议顺序
-
-1. 继续拆分主进程 `modeling` 业务函数，优先 `datasetPolicy` 与 `trainingTask`。
-2. 为盲训交易引擎补最小单测集（买入/卖出/跳过/自动平仓）。
-3. 为盲训页继续抽离 `useBlindTrainingSession` 一类状态 hook，其次继续细化 `Dashboard`。
-4. 在模型线补齐更严格时间切分评估与可视化报告。
+- 业务：[BRD.md](BRD.md)
+- 拆分方案：[split-plan-v2.md](split-plan-v2.md)
+- 数据 schema：[data-foundation-schema-v0.1.md](data-foundation-schema-v0.1.md)
+- 行为事件表：[behavior-event-design.md](behavior-event-design.md)
+- AI 协作规约：[AGENTS.md](../AGENTS.md)
