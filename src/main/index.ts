@@ -4,7 +4,7 @@ import path from 'path'
 import './logger'
 import log from './logger'
 import { closeDb, getDb, DB_PATH } from './db'
-import { closeBlindDb, getBlindDb } from './blindDb'
+import { closeBlindDb } from './blindDb'
 import { registerBlindIpc } from './ipc/blind'
 import { registerDataIpc } from './ipc/data'
 
@@ -85,6 +85,10 @@ const registerIpcHandlers = () => {
 
 const resolveSeedDbPath = (): string | null => {
   const candidates = [
+    path.join(process.cwd(), 'data/blind-seed.db'),
+    path.join(app.getAppPath(), 'data/blind-seed.db'),
+    path.join(__dirname, '../../data/blind-seed.db'),
+    path.join(__dirname, '../../../data/blind-seed.db'),
     path.join(process.cwd(), 'data/seed.db'),
     path.join(app.getAppPath(), 'data/seed.db'),
     path.join(__dirname, '../../data/seed.db'),
@@ -98,17 +102,6 @@ const resolveSeedDbPath = (): string | null => {
 
 const CURRENT_SEED_VERSION = 2
 
-const hasProtectedBlindData = (): boolean => {
-  try {
-    const db = getBlindDb()
-    const sessionCount = Number((db.prepare('SELECT COUNT(*) as count FROM training_sessions').get() as { count?: number })?.count || 0)
-    const actionCount = Number((db.prepare('SELECT COUNT(*) as count FROM trade_actions').get() as { count?: number })?.count || 0)
-    const customProfileCount = Number((db.prepare("SELECT COUNT(*) as count FROM training_profiles WHERE id <> 'default'").get() as { count?: number })?.count || 0)
-    return sessionCount > 0 || actionCount > 0 || customProfileCount > 0
-  } catch {
-    return false
-  }
-}
 
 const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
   const seedPath = resolveSeedDbPath()
@@ -120,9 +113,6 @@ const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
 
   try {
     const db = getDb()
-    if (hasProtectedBlindData()) {
-      return { needed: false, reason: 'protected_user_data_present' }
-    }
     const row = db.prepare('SELECT COUNT(*) as count FROM stock_list').get() as { count: number }
     if (row.count === 0) return { needed: true, reason: 'empty' }
 
@@ -151,11 +141,6 @@ const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
 const performSeedUpgrade = (seedPath: string): void => {
   const seedStat = fs.statSync(seedPath)
   const seedVersion = `${CURRENT_SEED_VERSION}_${seedStat.size}`
-
-  if (fs.existsSync(DB_PATH) && hasProtectedBlindData()) {
-    log.warn('[Init] Skip seed upgrade because protected blind-training data is present.')
-    return
-  }
 
   log.info(`[Init] Upgrading seed DB from ${seedPath} (${(seedStat.size / 1024 / 1024).toFixed(1)} MB)...`)
   closeDb()
