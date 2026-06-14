@@ -8,7 +8,6 @@ import { getBlindDb } from '../blindDb'
 import { marketDataService, type KlineInterval } from '../services/market-data'
 import { resolveMarketDbPath, saveMarketDbPathPreference, loadMarketCandles } from '../marketDb'
 import { getAutoSyncStatus, runIncrementalSync } from '../services/auto-sync'
-import { runAutoSignalScan } from './model'
 import { fail, ok } from './platformResult'
 
 const resolveIndexDbPath = (): string | null => {
@@ -397,20 +396,6 @@ export const registerDataIpc = () => {
         allResults.push(...results.map((r) => ({ ...r })))
       }
 
-      let autoSignalScan: Record<string, unknown>
-      try {
-        autoSignalScan = await runAutoSignalScan(normalizedPeriods, {
-          maxCodesPerPeriod: Math.min(80, Math.max(5, Number(count || 30))),
-          minConfidence: 0.85
-        }) as Record<string, unknown>
-      } catch (error) {
-        autoSignalScan = {
-          success: false,
-          reason: 'auto_scan_exception',
-          message: error instanceof Error ? error.message : 'unknown_error'
-        }
-      }
-
       const coverage = getCoverage()
       const syncAdvice: string[] = []
       if (normalizedPeriods.includes('15m') && coverage.m15CoveredStocks === 0) {
@@ -429,7 +414,6 @@ export const registerDataIpc = () => {
         syncedFromCache,
         syncedEmpty,
         totalResults: allResults.length,
-        autoSignalScan,
         coverage,
         syncAdvice
       })

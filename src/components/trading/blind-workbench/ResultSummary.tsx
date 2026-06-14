@@ -1,17 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import type { SessionReview } from '../../../types/ipc'
 import type { LocalActionLog, TrainingSample } from '../blind/types'
 import { TRADE_REASON_OPTIONS } from '../blind/types'
 import BaseKlineChart from '../blind/BaseKlineChart'
-import type { BaseMarker } from '../blind/BaseKlineChart'
 import { toSignedMoney, toSignedPct } from './formatters'
-
-interface BenchmarkSignal {
-  barIndex: number
-  signalType: 'buy' | 'sell'
-  score: number
-  factorType: string
-}
 
 interface ResultSummaryProps {
   totalPnl: number
@@ -37,108 +29,14 @@ const ResultSummary = ({
   onSwitchSample
 }: ResultSummaryProps) => {
   const [showChart, setShowChart] = useState(false)
-  const [showBenchmark, setShowBenchmark] = useState(false)
-  const [benchmarkSignals, setBenchmarkSignals] = useState<BenchmarkSignal[]>([])
 
-  useEffect(() => {
-    if (!activeSample || !showBenchmark) return
-
-    let cancelled = false
-
-    const fetchBenchmark = async () => {
-      try {
-        const candidates = await window.electronAPI?.listCandidates?.({
-          code: activeSample.code,
-          period: activeSample.period,
-          limit: 200
-        })
-        if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
-          if (!cancelled) setBenchmarkSignals([])
-          return
-        }
-
-        const timestamps = activeSample.klines.map((k) => k.timestamp)
-        const mapped: BenchmarkSignal[] = []
-        for (const cand of candidates) {
-          const candTs = Number(cand.bar_timestamp || 0)
-          if (!candTs) continue
-          let bestIdx = -1
-          let bestDiff = Infinity
-          for (let i = 0; i < timestamps.length; i++) {
-            const diff = Math.abs(timestamps[i]! - candTs)
-            if (diff < bestDiff) {
-              bestDiff = diff
-              bestIdx = i
-            }
-          }
-          if (bestIdx >= 0 && bestDiff < 86400000) {
-            mapped.push({
-              barIndex: bestIdx,
-              signalType: String(cand.signal_type || cand.label_type || 'buy') === 'sell' ? 'sell' : 'buy',
-              score: Number(cand.score || 0),
-              factorType: String(cand.factor_type || 'unknown'),
-            })
-          }
-        }
-        if (!cancelled) setBenchmarkSignals(mapped)
-      } catch {
-        if (!cancelled) setBenchmarkSignals([])
-      }
-    }
-
-    void fetchBenchmark()
-    return () => {
-      cancelled = true
-    }
-  }, [activeSample, showBenchmark])
-
-  const fullMarkers: BaseMarker[] = actions
+  const fullMarkers = actions
     .filter((a) => a.actionType === 'buy' || a.actionType === 'sell')
     .map((a) => ({
       barIndex: a.barIndex,
       actionType: a.actionType as 'buy' | 'sell',
       price: a.price
     }))
-
-  const benchmarkMarkers: BaseMarker[] = useMemo(() => {
-    if (!showBenchmark || benchmarkSignals.length === 0 || !activeSample) return []
-    return benchmarkSignals
-      .map((sig) => {
-        const bar = activeSample.klines[sig.barIndex]
-        if (!bar) return null
-        return {
-          barIndex: sig.barIndex,
-          actionType: sig.signalType,
-          price: bar.close
-        }
-      })
-      .filter((m): m is BaseMarker => m !== null)
-  }, [showBenchmark, benchmarkSignals, activeSample])
-
-  const benchmarkComparison = useMemo(() => {
-    if (!showBenchmark || benchmarkSignals.length === 0) return null
-    const userBuys = new Set(actions.filter((a) => a.actionType === 'buy').map((a) => a.barIndex))
-    const userSells = new Set(actions.filter((a) => a.actionType === 'sell').map((a) => a.barIndex))
-
-    let matches = 0
-    let conflicts = 0
-    for (const sig of benchmarkSignals) {
-      const nearbyRange = 3
-      let userMatch = false
-      if (sig.signalType === 'buy') {
-        for (let i = sig.barIndex - nearbyRange; i <= sig.barIndex + nearbyRange; i++) {
-          if (userBuys.has(i)) { userMatch = true; break }
-        }
-      } else {
-        for (let i = sig.barIndex - nearbyRange; i <= sig.barIndex + nearbyRange; i++) {
-          if (userSells.has(i)) { userMatch = true; break }
-        }
-      }
-      if (userMatch) matches++
-      else conflicts++
-    }
-    return { matches, conflicts, total: benchmarkSignals.length }
-  }, [showBenchmark, benchmarkSignals, actions])
 
   const completedTrades = useMemo(() => {
     const trades: { buyIndex: number; sellIndex: number; pnl: number; holdingBars: number }[] = []
@@ -254,47 +152,17 @@ const ResultSummary = ({
 
       {activeSample && activeSample.klines.length > 0 && (
         <div className="wt-result-chart-section">
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="wt-btn wt-btn-secondary" onClick={() => setShowChart((v) => !v)}>
-              {showChart ? '收起K线全景' : '查看K线全景（含买卖标记）'}
-            </button>
-            {showChart && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem', color: '#7b8cab', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={showBenchmark}
-                  onChange={(e) => setShowBenchmark(e.target.checked)}
-                />
-                显示模型信号基准
-              </label>
-            )}
-          </div>
+          <button className="wt-btn wt-btn-secondary" onClick={() => setShowChart((v) => !v)}>
+            {showChart ? '收起K线全景' : '查看K线全景（含买卖标记）'}
+          </button>
           {showChart && (
             <div className="wt-result-chart" style={{ height: 360, marginTop: 12 }}>
               <BaseKlineChart
                 data={activeSample.klines}
                 markers={fullMarkers}
-                benchmarkMarkers={showBenchmark ? benchmarkMarkers : undefined}
                 ticker={activeSample.code}
               />
-              {showBenchmark && (
-                <div className="wt-benchmark-legend" style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.8rem', color: '#7b8cab' }}>
-                  <span>◆ 你的交易 (红买/绿卖)</span>
-                  <span>△ 模型信号 (橙买/蓝卖)</span>
-                </div>
-              )}
             </div>
-          )}
-        </div>
-      )}
-
-      {benchmarkComparison && (
-        <div className="wt-benchmark-compare" style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(77,122,178,0.06)', borderRadius: 8, fontSize: '0.85rem' }}>
-          <strong>模型基准对比:</strong>{' '}
-          匹配 {benchmarkComparison.matches}/{benchmarkComparison.total} 个信号，{' '}
-          漏判 {benchmarkComparison.conflicts} 个。{' '}
-          {benchmarkComparison.total > 0 && (
-            <span>重合率 {(benchmarkComparison.matches / benchmarkComparison.total * 100).toFixed(0)}%。</span>
           )}
         </div>
       )}

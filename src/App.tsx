@@ -5,13 +5,8 @@ import './App.css'
 const BlindTrainingWorkbench = lazy(() => import('./components/trading/BlindTrainingWorkbench'))
 const TrainingOverview = lazy(() => import('./components/trading/TrainingOverview'))
 const DataManagement = lazy(() => import('./components/trading/DataManagement'))
-const ModelTrainingWorkbench = lazy(() => import('./components/trading/ModelTrainingWorkbench'))
-const StrategyVerificationWorkbench = lazy(() => import('./components/trading/StrategyVerificationWorkbench'))
-const ModelDeploymentWorkbench = lazy(() => import('./components/trading/ModelDeploymentWorkbench'))
-const AiChat = lazy(() => import('./components/trading/AiChat'))
-const AlphaResearchWorkbench = lazy(() => import('./components/trading/AlphaResearchWorkbench'))
 
-type AppModule = 'overview' | 'blind' | 'model' | 'verify' | 'deploy' | 'data' | 'aichat' | 'alpha'
+type AppModule = 'overview' | 'blind' | 'data'
 
 interface ModuleDefinition {
   id: AppModule
@@ -32,7 +27,7 @@ const MODULE_GROUPS = [
         label: '数据管理',
         category: '行情基础',
         summary: '初始化股票池、执行增量同步，检查真实行情覆盖情况。',
-        outcome: '为盲训和量化模型提供统一的 K 线数据底座。',
+        outcome: '为盲训提供统一的 K 线数据底座。',
         focus: ['初始化', '增量同步', '覆盖率检查']
       },
     ]
@@ -58,56 +53,6 @@ const MODULE_GROUPS = [
       },
     ]
   },
-  {
-    label: '量化模型',
-    modules: [
-      {
-        id: 'alpha' as AppModule,
-        label: 'Alpha 研究',
-        category: '因子挖掘',
-        summary: '因子库浏览、IC 分析、分箱收益与相关性矩阵，识别有效因子。',
-        outcome: '发现可解释、稳定、可交易的因子，诊断共线性风险。',
-        focus: ['因子库', 'IC 分析', '分箱收益', '相关性']
-      },
-      {
-        id: 'model' as AppModule,
-        label: '模型训练',
-        category: '训练与评估',
-        summary: '从候选审核、数据集冻结到特征构建和模型训练评估。',
-        outcome: '把认可的趋势买卖点样本沉淀成可解释、可迭代的模型。',
-        focus: ['候选审核', '数据集冻结', '特征构建', '训练评估']
-      },
-      {
-        id: 'verify' as AppModule,
-        label: '策略验证',
-        category: '回测与对照',
-        summary: '统一承载单模型回测、Benchmark 对照与 Walk-Forward 稳定性验证。',
-        outcome: '先验证策略有效性，再推进到模型部署与生产使用。',
-        focus: ['单模型回测', 'Benchmark 排名', 'Walk-Forward']
-      },
-      {
-        id: 'deploy' as AppModule,
-        label: '模型部署',
-        category: '上线与监控',
-        summary: '管理模型版本、激活生产模型、运行准实时预测，收集反馈。',
-        outcome: '把训练出的模型投入使用，再把真实反馈回流到下一轮训练。',
-        focus: ['模型仓库', '准实时预测', '提醒反馈', '再训练']
-      },
-    ]
-  },
-  {
-    label: '辅助',
-    modules: [
-      {
-        id: 'aichat' as AppModule,
-        label: 'AI 助手',
-        category: '智能问答',
-        summary: '用自然语言探索交易策略、解读模型信号、分析回测指标。',
-        outcome: '借助 AI 快速获得策略建议和模型优化方向。',
-        focus: ['策略分析', '信号解读', '指标问答']
-      },
-    ]
-  }
 ]
 
 const MODULES: ModuleDefinition[] = MODULE_GROUPS.flatMap(g => g.modules as ModuleDefinition[])
@@ -143,41 +88,6 @@ const renderModule = (
           autoStart={autoStartBlind}
           registerNavigationGuard={registerBlindNavigationGuard}
         />
-      </Suspense>
-    )
-  }
-  if (activeModule === 'model') {
-    return (
-      <Suspense fallback={<WorkspaceFallback label="模型训练" />}>
-        <ModelTrainingWorkbench />
-      </Suspense>
-    )
-  }
-  if (activeModule === 'verify') {
-    return (
-      <Suspense fallback={<WorkspaceFallback label="策略验证" />}>
-        <StrategyVerificationWorkbench />
-      </Suspense>
-    )
-  }
-  if (activeModule === 'deploy') {
-    return (
-      <Suspense fallback={<WorkspaceFallback label="模型部署" />}>
-        <ModelDeploymentWorkbench />
-      </Suspense>
-    )
-  }
-  if (activeModule === 'aichat') {
-    return (
-      <Suspense fallback={<WorkspaceFallback label="AI 助手" />}>
-        <AiChat />
-      </Suspense>
-    )
-  }
-  if (activeModule === 'alpha') {
-    return (
-      <Suspense fallback={<WorkspaceFallback label="Alpha 研究" />}>
-        <AlphaResearchWorkbench />
       </Suspense>
     )
   }
@@ -236,8 +146,8 @@ function App() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="app-brand">
-          <span className="app-brand-badge">Stock Trainer</span>
-          <h1 onClick={() => { void navigateToModule('overview', false) }}>人机协同交易系统</h1>
+          <span className="app-brand-badge">盘感训练</span>
+          <h1 onClick={() => { void navigateToModule('overview', false) }}>盲训工作台</h1>
         </div>
 
         <nav className="app-nav" aria-label="主导航">

@@ -1,8 +1,20 @@
 import { create } from 'zustand'
 import type { DataStats, SessionSummary, UnknownRecord } from '../types/ipc'
-import type { ModelVersionItem, StockOption } from '../components/trading/model/types'
 import type { TrainingProfile } from '../components/trading/blind-workbench/ProfileManager'
-import { toModelVersionItem, toStockOption } from '../components/trading/model/types'
+
+export interface StockOption {
+  code: string
+  name: string
+}
+
+const toStockOption = (raw: UnknownRecord): StockOption | null => {
+  const code = raw.code
+  if (typeof code !== 'string' || !code) return null
+  return {
+    code,
+    name: typeof raw.name === 'string' && raw.name ? raw.name : code
+  }
+}
 
 function toTrainingProfile(raw: UnknownRecord): TrainingProfile | null {
   if (!raw || typeof raw !== 'object') return null
@@ -30,10 +42,6 @@ function toTrainingProfile(raw: UnknownRecord): TrainingProfile | null {
 }
 
 interface PlatformState {
-  activeModel: ModelVersionItem | null
-  activeModelLoaded: boolean
-  modelList: ModelVersionItem[]
-  modelListLoaded: boolean
   dataStats: DataStats | null
   dataStatsLoaded: boolean
   sessionList: SessionSummary[]
@@ -47,31 +55,22 @@ interface PlatformState {
 }
 
 interface PlatformActions {
-  fetchActiveModel: () => Promise<void>
-  fetchModelList: () => Promise<void>
   fetchDataStats: () => Promise<void>
   fetchSessionList: () => Promise<void>
   fetchStockList: (limit?: number) => Promise<void>
   fetchActiveProfile: () => Promise<void>
   fetchProfileList: () => Promise<void>
-  invalidateActiveModel: () => Promise<void>
-  invalidateModelList: () => Promise<void>
   invalidateDataStats: () => Promise<void>
   invalidateSessionList: () => Promise<void>
   invalidateStockList: () => Promise<void>
   invalidateActiveProfile: () => Promise<void>
   invalidateProfileList: () => Promise<void>
-  activateModel: (modelId: string) => Promise<boolean>
   switchProfile: (profileId: string) => Promise<boolean>
   createProfile: (name: string, capital: number) => Promise<boolean>
   deleteProfile: (profileId: string) => Promise<boolean>
 }
 
 export const usePlatformStore = create<PlatformState & PlatformActions>((set, get) => ({
-  activeModel: null,
-  activeModelLoaded: false,
-  modelList: [],
-  modelListLoaded: false,
   dataStats: null,
   dataStatsLoaded: false,
   sessionList: [],
@@ -82,28 +81,6 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
   activeProfileLoaded: false,
   profileList: [],
   profileListLoaded: false,
-
-  fetchActiveModel: async () => {
-    try {
-      const raw = await window.electronAPI?.getActiveModel?.()
-      const model = raw ? toModelVersionItem(raw as UnknownRecord) : null
-      set({ activeModel: model, activeModelLoaded: true })
-    } catch {
-      set({ activeModel: null, activeModelLoaded: true })
-    }
-  },
-
-  fetchModelList: async () => {
-    try {
-      const rows = await window.electronAPI?.listModels?.()
-      const models = (rows || [])
-        .map((row) => toModelVersionItem(row as UnknownRecord))
-        .filter((row): row is ModelVersionItem => row !== null)
-      set({ modelList: models, modelListLoaded: true })
-    } catch {
-      set({ modelList: [], modelListLoaded: true })
-    }
-  },
 
   fetchDataStats: async () => {
     try {
@@ -136,16 +113,6 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
     }
   },
 
-  invalidateActiveModel: async () => {
-    set({ activeModelLoaded: false })
-    await get().fetchActiveModel()
-  },
-
-  invalidateModelList: async () => {
-    set({ modelListLoaded: false })
-    await get().fetchModelList()
-  },
-
   invalidateDataStats: async () => {
     set({ dataStatsLoaded: false })
     await get().fetchDataStats()
@@ -159,22 +126,6 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
   invalidateStockList: async () => {
     set({ stockListLoaded: false })
     await get().fetchStockList()
-  },
-
-  activateModel: async (modelId: string) => {
-    try {
-      const result = await window.electronAPI?.activateModel?.(modelId)
-      if (result && typeof result === 'object' && 'success' in result && result.success) {
-        await Promise.all([
-          get().fetchActiveModel(),
-          get().fetchModelList()
-        ])
-        return true
-      }
-      return false
-    } catch {
-      return false
-    }
   },
 
   fetchActiveProfile: async () => {

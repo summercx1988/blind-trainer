@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { SaveSessionResult, SeriesPredictionData, SessionFinishData, SessionReview, PlatformResult } from '../../types/ipc'
+import type { SaveSessionResult, SessionFinishData, SessionReview, PlatformResult } from '../../types/ipc'
 import { getPlatformErrorMessage } from '../../types/ipc'
 import { usePlatformStore } from '../../stores/platformStore'
 import type {
@@ -28,7 +28,6 @@ import AccountOverview from './blind-workbench/AccountOverview'
 import ActionSection from './blind-workbench/ActionSection'
 import ActionLog from './blind-workbench/ActionLog'
 import ResultSummary from './blind-workbench/ResultSummary'
-import type { BaseMarker } from './blind/BaseKlineChart'
 import InfoHover from '../common/InfoHover'
 import './BlindTrainingWorkbench.css'
 import '../../types/global.d'
@@ -86,13 +85,8 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [minPrice, setMinPrice] = useState(0)
   const [extendingSample, setExtendingSample] = useState(false)
 
-  const [activeModelId, setActiveModelId] = useState<string | null>(null)
-  const storeActiveModel = usePlatformStore((s) => s.activeModel)
   const activeProfile = usePlatformStore((s) => s.activeProfile)
   const fetchActiveProfile = usePlatformStore((s) => s.fetchActiveProfile)
-  const [showModelSignals, setShowModelSignals] = useState(false)
-  const [modelSignalMarkers, setModelSignalMarkers] = useState<BaseMarker[]>([])
-  const [modelSignalsLoading, setModelSignalsLoading] = useState(false)
   const [sessionInitialCapital, setSessionInitialCapital] = useState(INITIAL_CAPITAL)
   const [sessionStartedAt, setSessionStartedAt] = useState(0)
 
@@ -160,75 +154,6 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   useEffect(() => {
     void fetchActiveProfile()
   }, [fetchActiveProfile])
-
-  useEffect(() => {
-    if (storeActiveModel?.id) {
-      setActiveModelId(storeActiveModel.id)
-    } else {
-      setActiveModelId(null)
-    }
-  }, [storeActiveModel])
-
-  useEffect(() => {
-    if (!showModelSignals || !activeSample || !activeModelId || sessionStatus !== 'running') {
-      setModelSignalMarkers([])
-      return
-    }
-
-    let cancelled = false
-    setModelSignalsLoading(true)
-
-    const fetchSignals = async () => {
-      try {
-        const result = await window.electronAPI?.predictSeries?.(activeModelId, activeSample.code, activeSample.period) as PlatformResult<SeriesPredictionData> | undefined
-        if (cancelled) return
-        if (!result || !result.success || !Array.isArray(result.data.signals)) {
-          setModelSignalMarkers([])
-          return
-        }
-
-        const signals = result.data.signals as Array<Record<string, unknown>>
-        const timestamps = activeSample.klines.map((k) => k.timestamp)
-
-        const markers: BaseMarker[] = []
-        for (const sig of signals) {
-          const sigTs = Number(sig.timestamp || 0)
-          if (!sigTs) continue
-          const sigType = String(sig.signal || '')
-          if (sigType !== 'buy' && sigType !== 'sell') continue
-
-          let bestIdx = -1
-          let bestDiff = Infinity
-          for (let i = 0; i < timestamps.length; i++) {
-            const diff = Math.abs(timestamps[i]! - sigTs)
-            if (diff < bestDiff) {
-              bestDiff = diff
-              bestIdx = i
-            }
-          }
-          const tolerance = activeSample.period === '1d' ? 86400000 : 900000
-          if (bestIdx >= 0 && bestDiff < tolerance) {
-            const bar = activeSample.klines[bestIdx]
-            if (bar) {
-              markers.push({
-                barIndex: bestIdx,
-                actionType: sigType as 'buy' | 'sell',
-                price: bar.close
-              })
-            }
-          }
-        }
-        if (!cancelled) setModelSignalMarkers(markers)
-      } catch {
-        if (!cancelled) setModelSignalMarkers([])
-      } finally {
-        if (!cancelled) setModelSignalsLoading(false)
-      }
-    }
-    void fetchSignals()
-
-    return () => { cancelled = true }
-  }, [showModelSignals, activeSample, activeModelId, sessionStatus])
 
   const currentBar = useMemo(() => {
     if (!activeSample) return null
@@ -331,17 +256,6 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         price: action.price
       }))
   }, [actions, currentBarIndex, visibleStartIndex])
-
-  const visibleBenchmarkMarkers = useMemo(() => {
-    if (!showModelSignals || modelSignalMarkers.length === 0) return undefined
-    return modelSignalMarkers
-      .filter((m) => m.barIndex >= visibleStartIndex && m.barIndex <= currentBarIndex)
-      .map((m) => ({
-        barIndex: m.barIndex - visibleStartIndex,
-        actionType: m.actionType,
-        price: m.price
-      }))
-  }, [showModelSignals, modelSignalMarkers, currentBarIndex, visibleStartIndex])
 
   const accountEquity = useMemo(() => {
     const markPrice = currentBar?.close || account.avgPrice || 0
@@ -1146,34 +1060,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 currentBar={currentBar}
                 visibleBars={visibleBars}
                 tradeMarkers={visibleTradeMarkers}
-                benchmarkMarkers={visibleBenchmarkMarkers}
                 visibleCount={visibleCount}
                 onDecreaseVisibleCount={() => setVisibleCount((value) => Math.max(20, value - 10))}
                 onIncreaseVisibleCount={() => setVisibleCount((value) => Math.min(200, value + 10))}
               />
-
-              <div className="wt-model-signal-bar">
-                <label className="wt-model-signal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showModelSignals}
-                    onChange={(e) => setShowModelSignals(e.target.checked)}
-                  />
-                  显示模型信号
-                </label>
-                {showModelSignals && !activeModelId && (
-                  <span className="wt-model-signal-hint">（未激活模型，请先在「模型部署」页面激活一个模型）</span>
-                )}
-                {showModelSignals && activeModelId && modelSignalsLoading && (
-                  <span className="wt-model-signal-hint">加载中...</span>
-                )}
-                {showModelSignals && activeModelId && !modelSignalsLoading && modelSignalMarkers.length > 0 && (
-                  <span className="wt-model-signal-hint">
-                    {modelSignalMarkers.filter((m) => m.actionType === 'buy').length} 买 / {modelSignalMarkers.filter((m) => m.actionType === 'sell').length} 卖 信号
-                    <span style={{ marginLeft: 8 }}>△ 橙买 / 蓝卖</span>
-                  </span>
-                )}
-              </div>
 
               <ActionSection
                 actionPending={actionPending}

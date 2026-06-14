@@ -6,10 +6,8 @@ import log from './logger'
 import { closeDb, getDb, DB_PATH } from './db'
 import { closeBlindDb, getBlindDb } from './blindDb'
 import { registerBlindIpc } from './ipc/blind'
-import { registerModelIpc } from './ipc/model'
 import { registerDataIpc } from './ipc/data'
 
-import { registerBacktestIpc } from './ipc/backtest'
 import { marketDataService } from './services/market-data'
 import { startAutoSync, stopAutoSync } from './services/auto-sync'
 
@@ -82,9 +80,7 @@ const registerIpcHandlers = () => {
     }
   })
   registerBlindIpc()
-  registerModelIpc()
   registerDataIpc()
-  registerBacktestIpc()
 }
 
 const resolveSeedDbPath = (): string | null => {
