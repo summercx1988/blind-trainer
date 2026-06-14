@@ -675,9 +675,16 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           activeSampleRef.current = targetSample
           setActiveSample(targetSample)
         }
-        currentBarIndexRef.current = executionBarIndex
-        currentBarRef.current = targetSample.klines[executionBarIndex] || currentBarRef.current
-        setCurrentBarIndex(executionBarIndex)
+        const nextIndex = executionBarIndex + 1
+        if (nextIndex < targetSample.klines.length) {
+          currentBarIndexRef.current = nextIndex
+          currentBarRef.current = targetSample.klines[nextIndex] || currentBarRef.current
+          setCurrentBarIndex(nextIndex)
+        } else {
+          currentBarIndexRef.current = executionBarIndex
+          currentBarRef.current = targetSample.klines[executionBarIndex] || currentBarRef.current
+          setCurrentBarIndex(executionBarIndex)
+        }
         return
       }
 
