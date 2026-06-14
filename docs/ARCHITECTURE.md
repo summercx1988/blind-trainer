@@ -8,7 +8,7 @@
 
 本文档服务于**盲训独立 App**（仓库 [summercx1988/blind-trainer](https://github.com/summercx1988/blind-trainer)）。
 
-历史双子系统架构见 [archive/2026-06-split/quant-removed/ARCHITECTURE.md](archive/2026-06-split/quant-removed/ARCHITECTURE.md)（仅作历史参考）。
+历史归档见 [archive/](archive/)。
 
 ---
 
@@ -120,7 +120,7 @@
 ### 4.3 数据隔离
 - 行情库路径：`app.getPath('userData')` + `/stock-trading.db`
 - 盲训库路径：`app.getPath('userData')` + `/blind-training.db`
-- 与量化 App 的 userData **完全独立**
+- 路径由 `package.json` 的 `name` 字段决定（`blind-trainer`），与其他 App 隔离
 
 ## 5. 数据 schema
 
@@ -207,13 +207,6 @@ CREATE TABLE reviews (
 | 图表 | ECharts |
 | 数据源 | sina / tencent / baostock（手动触发） |
 
-## 8. 拆分关系
+## 8. 历史
 
-| | 量化 App | 盲训 App（这里） |
-| --- | --- | --- |
-| Electron 主进程 | db.ts (20+ 表) | db.ts (2 表) + blindDb.ts |
-| IPC 桥接 | 22 + 量化专属 | 22 数据 + 8 盲训 |
-| Python 子工程 | ✅ | ❌ |
-| 数据同步 | 自动 + 手动 | 仅手动 |
-
-详见 [split-plan-v2.md](split-plan-v2.md)。
+历史背景（早期归档）见 [archive/](archive/)。

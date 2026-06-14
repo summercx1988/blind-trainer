@@ -8,7 +8,7 @@
 
 本文档服务于**盲训独立 App**（仓库 [summercx1988/blind-trainer](https://github.com/summercx1988/blind-trainer)）。
 
-历史双子系统技术方案见 [archive/2026-06-split/quant-removed/CORE_TECH_SOLUTION.md](archive/2026-06-split/quant-removed/CORE_TECH_SOLUTION.md)（仅作历史参考）。
+历史归档见 [archive/](archive/)。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ### 2.3 关闭 auto-sync
 
-**问题**：原本量化 App 每天 15:15 自动同步行情。盲训不需要，且自动同步会污染"训练中的 K 线边界"。
+**问题**：自动同步行情会污染"训练中的 K 线边界"。
 
 **方案**：
 - 注释掉 [src/main/index.ts](../src/main/index.ts) 中的 `startAutoSync()`
@@ -55,15 +55,13 @@
 
 **commit**：`2a93311 refactor: 关闭盲训 App auto-sync`
 
-### 2.4 数据隔离（与量化 App）
-
-**问题**：如果两个 App 共享同一个 `stock-trading.db`，量化 App 的 15:15 同步可能"修改"盲训正在用的 K 线。
+### 2.4 数据隔离
 
 **方案**：
 - 盲训 `package.json` name = `blind-trainer`
 - userData 路径 = `~/Library/Application Support/blind-trainer/`
-- 行情库 = userData + `/stock-trading.db`（**仅盲训使用**）
-- 与量化 App 的 `~/Library/Application Support/stock-trading-simulator/stock-trading.db` 完全独立
+- 行情库 = userData + `/stock-trading.db`
+- 与其他 App 的 userData 隔离（路径由 `name` 决定）
 
 ### 2.5 随机起点抽取
 
@@ -107,20 +105,14 @@
 | 行情库只手动同步 | 风险：忘记更新 | 后续加"启动时提示数据陈旧度" |
 | 不支持多用户档案 | 单用户 | 待产品验证后增加 |
 
-## 6. 与量化 App 的对比
+## 6. 历史
 
-| 维度 | 量化 App | 盲训 App（这里） |
-| --- | --- | --- |
-| K 线类型 | 日线 + 15m + 5m | 仅日线 |
-| 数据更新 | 自动 15:15 + 手动 | 仅手动 |
-| 行情库大小 | 20GB | 885MB |
-| 复盘精度 | 时间戳级 | 日级 |
-| 业务关注点 | 模型预测准确度 | 训练盘感 |
+历史背景（早期归档）见 [archive/](archive/)。
 
 ## 7. 相关文档
 
 - 业务：[BRD.md](BRD.md)
-- 拆分方案：[split-plan-v2.md](split-plan-v2.md)
+- 架构：[ARCHITECTURE.md](ARCHITECTURE.md)
 - 数据 schema：[data-foundation-schema-v0.1.md](data-foundation-schema-v0.1.md)
 - 行为事件表：[behavior-event-design.md](behavior-event-design.md)
 - AI 协作规约：[AGENTS.md](../AGENTS.md)

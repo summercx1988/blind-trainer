@@ -8,11 +8,9 @@
 
 **盲训独立 App**（macOS Electron App）：基于真实历史 K 线的"信息遮蔽"盘感训练工具。
 
-本仓库从 [summercx1988/stock-trading-simulator](https://github.com/summercx1988/stock-trading-simulator) 拆分而来（2026-06），**只承载盲训模块**（训练总览 / 盲训工作台 / 数据管理）。
+本仓库是独立产品，**不与其他项目协同**。所有改动请在 `blind-trainer/` 目录下进行。
 
-**量化模块**在独立仓库 [summercx1988/stock-trading-simulator](https://github.com/summercx1988/stock-trading-simulator)，历史快照见其 `archive/dual-system` 分支（tag `v-dual-backup`）。
-
-技术栈：Electron 41 + React 19 + TypeScript 5 + Vite 8 + better-sqlite3。详见 [docs/split-plan-v2.md](docs/split-plan-v2.md)。
+技术栈：Electron 41 + React 19 + TypeScript 5 + Vite 8 + better-sqlite3。
 
 ---
 
@@ -63,11 +61,11 @@ blind-trainer/
 - 不添加注释（除非用户明确要求）
 - React 19 + Hooks；zustand 管状态
 
-### 2.4 拆分后协作
+### 2.4 仓库边界
 
-- 任何修改前先确认在 `blind-trainer/` 目录下（不要改 `stock-trading-simulator/`）
-- 不要回写量化模块相关代码（已迁出）
-- 盲训相关修复记录应在本仓库 `docs/archive/` 累积
+- 任何修改前先确认在 `blind-trainer/` 目录下
+- 不引用、不依赖于其他仓库
+- 本仓库独立运营，独立发版
 
 ---
 
@@ -78,16 +76,13 @@ blind-trainer/
 - **不要**在 React 组件里直接做 SQLite 写（必须走 IPC）
 - **不要**假定跨平台；本项目 macOS 优先
 - **不要**主动同步行情数据（"盲"训的核心约束）
+- **不要**引入与其他项目的 npm 依赖 / 共享代码包
 
 ---
 
 ## 4. agent 角色注册表
 
-> 盲训 App 当前**不内置** AI agent 角色。盲训行为数据分析相关需求通过环境变量将数据导出到量化 App 仓库的 `agents/data_analyst/` 工具使用。
-
-| 角色 | 配置文件 | 主要工具 | 适用任务 |
-| --- | --- | --- | --- |
-| `data-analyst` | [summercx1988/stock-trading-simulator/agents/data_analyst/AGENT.md](https://github.com/summercx1988/stock-trading-simulator/blob/main/agents/data_analyst/AGENT.md) | python scripts | 盲训行为数据分析（通过量化仓库工具） |
+> 本仓库当前**不内置** AI agent 角色。如需数据分析能力，参考 [docs/behavior-event-design.md](docs/behavior-event-design.md) 中的事件表自行实现。
 
 ---
 
@@ -96,7 +91,7 @@ blind-trainer/
 ### 5.1 新功能落地
 
 1. 读相关 docs（`docs/`）
-2. 在 `main` 分支做（盲训 App 不需要 safe-refactor 拆分网）
+2. 在 `main` 分支做
 3. 写代码 + 跑 `npx tsc -b --noEmit`
 4. 启动验证：`npm run dev`
 5. 提交：`git commit -m "feat: ..."` → `git push`
@@ -121,10 +116,7 @@ blind-trainer/
 
 ## 7. 相关链接
 
-- **拆分方案（最新）**：[docs/split-plan-v2.md](docs/split-plan-v2.md)
+- 业务：[docs/BRD.md](docs/BRD.md)
+- 架构：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - 数据底座契约：[docs/data-foundation-schema-v0.1.md](docs/data-foundation-schema-v0.1.md)
 - 盲训事件表：[docs/behavior-event-design.md](docs/behavior-event-design.md)
-- 量化 App 仓库：[summercx1988/stock-trading-simulator](https://github.com/summercx1988/stock-trading-simulator)
-- 量化 App 数据分析工具：[summercx1988/stock-trading-simulator/agents/data_analyst/](https://github.com/summercx1988/stock-trading-simulator/tree/main/agents/data_analyst)
-- ~~Menu Bar 规格~~：[docs/menu-bar-app-spec.md](docs/menu-bar-app-spec.md)（已废弃）
-- ~~拆分总览 v1~~：[docs/monorepo-init.md](docs/monorepo-init.md)（已废弃）

@@ -8,9 +8,7 @@
 
 本文档服务于**盲训独立 App**（仓库 [summercx1988/blind-trainer](https://github.com/summercx1988/blind-trainer)）。
 
-量化交易业务需求见 [summercx1988/stock-trading-simulator/docs/BRD.md](https://github.com/summercx1988/stock-trading-simulator/blob/main/docs/BRD.md)。
-
-历史双子系统 BRD 见 [archive/2026-06-split/quant-removed/BRD.md](archive/2026-06-split/quant-removed/BRD.md)（仅作历史参考）。
+历史归档见 [archive/](archive/)。
 
 ---
 
@@ -42,8 +40,6 @@
 - 数据管理（行情库加载、手动同步、覆盖率诊断）
 
 ### 4.2 不在范围内
-- **量化交易**——已迁出至独立仓库
-- **AI 助手 / Alpha 探索 / 模型训练 / 模型部署**——已迁出
 - **任何"应该买什么"的交易建议**——本项目是训练工具，不给建议
 - **云端同步**——一切本地
 
@@ -64,13 +60,6 @@
 - ❌ 自动同步行情（破坏"盲"训约束）
 - ❌ 接入券商交易接口
 
-## 7. 拆分关系
+## 7. 历史
 
-| | 量化 App | 盲训 App（这里） |
-| --- | --- | --- |
-| 业务定位 | 量化研究 | 主观训练 |
-| 目标用户 | 量化研究者 | 主观交易者 |
-| 核心产出 | 预测模型 | 训练盘感 |
-| 关系 | 平行 | 平行 |
-
-详见 [split-plan-v2.md](split-plan-v2.md)。
+历史背景（早期归档 / 已废弃文档）见 [archive/](archive/)。
