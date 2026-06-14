@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { PlatformResult, ProfileDeleteData } from '../../../types/ipc'
 import { getPlatformErrorMessage } from '../../../types/ipc'
+import { UserIcon, ChartBarIcon, CalendarIcon, TrendUpIcon, WalletIcon, TargetIcon, ClockIcon, CloseIcon } from '../../common/Icons'
 import '../BlindTrainingWorkbench.css'
 
 export interface TrainingProfile {
@@ -355,13 +356,13 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
     <div className="pm-container">
       <div className="pm-header">
         <div className="pm-header-left">
-          <h3>👤 存档管理与收益复盘</h3>
+          <h3><UserIcon size={18} className="pm-h-icon" /> 存档管理与收益复盘</h3>
           <span className="pm-header-sub">
             独立跟踪每个存档的训练表现、资金变化和赚钱效率
           </span>
         </div>
         {onClose && (
-          <button className="pm-close-btn" onClick={onClose}>✕</button>
+          <button className="pm-close-btn" onClick={onClose} aria-label="关闭"><CloseIcon size={16} /></button>
         )}
       </div>
 
@@ -391,7 +392,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
       {activeProfile && activeTab === 'overview' && (
         <>
           <div className="pm-active-card">
-            <div className="pm-active-name">👤 {activeProfile.name}</div>
+            <div className="pm-active-name"><UserIcon size={16} /> {activeProfile.name}</div>
             <div className="pm-active-stats">
               <span className="pm-stat">
                 <span className="pm-stat-label">当前资金</span>
@@ -425,7 +426,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
           </div>
 
           <div className="pm-efficiency-card">
-            <h4>📊 赚钱效率指标</h4>
+            <h4><ChartBarIcon size={16} className="pm-h-icon" /> 赚钱效率指标</h4>
             <div className="pm-efficiency-grid">
               <div className="pm-eff-item">
                 <div className="pm-eff-label">平均持仓天数</div>
@@ -481,7 +482,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
       {activeProfile && activeTab === 'calendar' && (
         <div className="pm-calendar-section">
           <div className="pm-section-header">
-            <h4>📅 训练日历</h4>
+            <h4><CalendarIcon size={16} className="pm-h-icon" /> 训练日历</h4>
             <div className="pm-calendar-legend">
               {PNL_LEVELS.map((level) => (
                 <span key={level.label} className="legend-item">
@@ -561,7 +562,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
 
       {activeProfile && activeTab === 'trend' && (
         <div className="pm-trend-section">
-          <h4>📈 收益趋势</h4>
+          <h4><TrendUpIcon size={16} className="pm-h-icon" /> 收益趋势</h4>
           {statsLoading ? (
             <div className="pm-calendar-loading">加载中...</div>
           ) : trendData ? (
@@ -719,10 +720,13 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
                   </span>
                 </div>
                 <div className="pm-item-detail">
-                  💰 {toMoney(p.current_capital)}元
-                  &nbsp;·&nbsp; 🎯 {p.total_sessions}轮
-                  &nbsp;·&nbsp; 胜率 {p.total_sessions > 0 ? ((p.total_wins / p.total_sessions) * 100).toFixed(1) : '0'}%
-                  &nbsp;·&nbsp; ⏱ {formatDuration(p.total_duration_seconds)}
+                  <span className="pm-item-detail-item"><WalletIcon size={12} /> {toMoney(p.current_capital)}元</span>
+                  <span className="pm-item-detail-sep">·</span>
+                  <span className="pm-item-detail-item"><TargetIcon size={12} /> {p.total_sessions}轮</span>
+                  <span className="pm-item-detail-sep">·</span>
+                  <span className="pm-item-detail-item">胜率 {p.total_sessions > 0 ? ((p.total_wins / p.total_sessions) * 100).toFixed(1) : '0'}%</span>
+                  <span className="pm-item-detail-sep">·</span>
+                  <span className="pm-item-detail-item"><ClockIcon size={12} /> {formatDuration(p.total_duration_seconds)}</span>
                 </div>
               </div>
               <div className="pm-item-actions">

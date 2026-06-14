@@ -171,8 +171,8 @@
 }
 
 .ov-fund-value.ov-fund-lg { font-size: 1.3rem; }
-.ov-fund-value.up { color: #ff8a80; }
-.ov-fund-value.down { color: #69f0ae; }
+.ov-fund-value.up { color: #e74c3c; }
+.ov-fund-value.down { color: #27ae60; }
 
 .ov-fund-arrow { font-size: 1rem; color: rgba(255, 255, 255, 0.35); }
 
@@ -203,8 +203,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.ov-qs-val.up { color: #ff8a80; }
-.ov-qs-val.down { color: #69f0ae; }
+.ov-qs-val.up { color: #e74c3c; }
+.ov-qs-val.down { color: #27ae60; }
 
 .ov-qs-lbl {
   font-size: 0.66rem;
@@ -451,8 +451,8 @@
   gap: 0.85rem;
 }
 
-.ov-tooltip-row .up { color: #ff8a80; }
-.ov-tooltip-row .down { color: #69f0ae; }
+.ov-tooltip-row .up { color: #e74c3c; }
+.ov-tooltip-row .down { color: #27ae60; }
 
 /* === Sessions Section === */
 .ov-sessions-section {

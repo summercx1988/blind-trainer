@@ -29,6 +29,7 @@ import ActionSection from './blind-workbench/ActionSection'
 import ActionLog from './blind-workbench/ActionLog'
 import ResultSummary from './blind-workbench/ResultSummary'
 import InfoHover from '../common/InfoHover'
+import { UserIcon, ChartBarIcon } from '../common/Icons'
 import './BlindTrainingWorkbench.css'
 import '../../types/global.d'
 
@@ -947,7 +948,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 : activeProfile.total_pnl
               return (
                 <>
-                  <span className="wt-profile-icon">👤</span>
+                  <UserIcon className="wt-profile-icon" size={16} />
                   <span className="wt-profile-name">{activeProfile.name}</span>
                   <span className="wt-profile-capital">{displayCapital.toFixed(0)}元</span>
                   <span className={`wt-profile-pnl ${displayPnl >= 0 ? 'up' : 'down'}`}>
@@ -977,7 +978,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       {sessionStatus === 'idle' && !dataReady && (
         <div className="wt-setup">
           <div className="wt-no-data">
-            <div className="wt-no-data-icon">📊</div>
+            <div className="wt-no-data-icon"><ChartBarIcon size={40} /></div>
             <div className="wt-no-data-text">
               {sampleLoading ? '正在加载样本...' : '暂无真实行情数据'}
             </div>

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import type { SessionReview } from '../../../types/ipc'
 import type { LocalActionLog, TrainingSample } from '../blind/types'
 import { TRADE_REASON_OPTIONS } from '../blind/types'
+import { ChartBarIcon } from '../../common/Icons'
 import BaseKlineChart from '../blind/BaseKlineChart'
 import { toSignedMoney, toSignedPct } from './formatters'
 
@@ -123,7 +124,7 @@ const ResultSummary = ({
       </div>
 
       <div className="wt-result-efficiency">
-        <h4>📊 本轮赚钱效率</h4>
+        <h4><ChartBarIcon size={16} className="wt-h-icon" /> 本轮赚钱效率</h4>
         <div className="wt-efficiency-grid">
           <div className="wt-eff-item">
             <div className="wt-eff-label">平均持仓Bar</div>

@@ -1602,3 +1602,46 @@
     grid-template-columns: 1fr;
   }
 }
+
+.wt-profile-icon {
+  display: inline-flex;
+  color: #5a6c82;
+  flex-shrink: 0;
+}
+
+.wt-no-data-icon {
+  color: #8a95ab;
+}
+
+.wt-btn-icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wt-h-icon,
+.pm-h-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  color: #0e7d63;
+  margin-right: 2px;
+}
+
+.pm-item-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.76rem;
+  color: rgba(248, 251, 253, 0.6);
+}
+
+.pm-item-detail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pm-item-detail-sep {
+  color: rgba(255, 255, 255, 0.25);
+}

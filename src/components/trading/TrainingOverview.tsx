@@ -4,6 +4,7 @@ import type { SessionActionRecord, SessionReview, SessionSummary } from '../../t
 import ReplayChart from './history/ReplayChart'
 import type { ReplayAction } from './history/ReplayChart'
 import type { TrainingProfile } from './blind-workbench/ProfileManager'
+import { CloseIcon } from '../common/Icons'
 import './TrainingOverview.css'
 import '../../types/global.d'
 
@@ -536,7 +537,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
               </div>
             </div>
           ) : (
-            <button className="ov-btn ov-btn-primary ov-btn-lg" onClick={() => setShowCreateForm(true)}>
+            <button className="ov-btn ov-btn-primary ov-btn-lg" onClick={() => setShowCreateForm(true)} aria-label="创建训练账户">
               创建第一个账户
             </button>
           )}
@@ -846,7 +847,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
                     <div className="ov-detail-head">
                       <div className="ov-detail-title">
                         <h3>{selectedSession.stock_name || selectedSession.stock_code}</h3>
-                        <button className="ov-detail-close" onClick={() => { setSelectedSessionId(''); setDetailActions([]); setDetailReview(null); setDetailKlineData([]); setShowReplayChart(false) }}>✕</button>
+                        <button className="ov-detail-close" onClick={() => { setSelectedSessionId(''); setDetailActions([]); setDetailReview(null); setDetailKlineData([]); setShowReplayChart(false) }} aria-label="关闭详情"><CloseIcon size={14} /></button>
                       </div>
                       <p>{selectedSession.stock_code} · {selectedSession.interval_type} · {formatDateTime(selectedSession.started_at)}</p>
                     </div>

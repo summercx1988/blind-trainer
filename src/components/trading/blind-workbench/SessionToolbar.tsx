@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { ExecutionMode, PeriodType, SessionStatus, TrainingSample } from '../blind/types'
 import { REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
-
+import { CheckIcon, GearIcon } from '../../common/Icons'
 const SAMPLE_POOL_BAR_OPTIONS = [260, 520, 1040, 1560]
 const SAMPLE_CANDIDATE_OPTIONS = [
   { value: 40, label: '40只' },
@@ -220,7 +220,12 @@ const SettingsPanel = ({
           onClick={handleApply}
           disabled={!hasChanges || sampleLoading}
         >
-          {hasChanges ? '✓ 应用设置' : '设置已同步'}
+          {hasChanges ? (
+            <span className="wt-btn-icon-text">
+              <CheckIcon size={14} />
+              <span>应用设置</span>
+            </span>
+          ) : '设置已同步'}
         </button>
         {hasChanges && <span className="wt-settings-hint">有未应用的更改</span>}
       </div>
@@ -298,7 +303,10 @@ const SessionToolbar = ({
             onClick={onToggleSettings}
             title="设置"
           >
-            {showSettings ? '收起设置' : '⚙ 设置'}
+            <span className="wt-btn-icon-text">
+              <GearIcon size={14} />
+              {showSettings ? '收起设置' : '设置'}
+            </span>
           </button>
           {sessionStatus === 'running' && (
             <button
