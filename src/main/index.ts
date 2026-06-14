@@ -9,7 +9,7 @@ import { registerBlindIpc } from './ipc/blind'
 import { registerDataIpc } from './ipc/data'
 
 import { marketDataService } from './services/market-data'
-import { startAutoSync, stopAutoSync } from './services/auto-sync'
+import { stopAutoSync } from './services/auto-sync'
 
 function getPreloadPath(): string {
   const appPath = app.getAppPath().replace('file://', '')
@@ -203,7 +203,8 @@ app.whenReady().then(async () => {
     }
   }
 
-  startAutoSync()
+  // 盲训 App 不主动同步：仅靠种子数据 + 手动更新（设置页 → 数据管理）
+  // startAutoSync()
 })
 
 app.on('window-all-closed', () => {
