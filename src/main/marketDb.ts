@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import Database from 'better-sqlite3'
-import { getDb, DB_PATH } from './db'
+import { getDb, getDbPath } from './db'
 
 export type KlineInterval = '5m' | '15m' | '30m' | '60m' | '1d'
 
@@ -43,7 +43,8 @@ export const resolveMarketDbPath = (): { path: string; source: string; exists: b
     return { path: repoPath, source: 'repo_default', exists: true }
   }
 
-  return { path: DB_PATH, source: 'main_fallback', exists: fs.existsSync(DB_PATH) }
+  const dbPath = getDbPath()
+  return { path: dbPath, source: 'main_fallback', exists: fs.existsSync(dbPath) }
 }
 
 export const saveMarketDbPathPreference = (rawPath: string): { path: string; exists: boolean } => {

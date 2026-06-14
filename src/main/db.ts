@@ -1,10 +1,25 @@
-import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import log from './logger'
 import Database from 'better-sqlite3'
 
-export const DB_PATH = process.env.STOCK_TRADING_DB_PATH || process.env.TRADING_DB_PATH || path.join(app.getPath('userData'), 'stock-trading.db')
+let _dbPath: string | null = null
+
+export function getDbPath(): string {
+  if (_dbPath) return _dbPath
+  if (process.env.STOCK_TRADING_DB_PATH || process.env.TRADING_DB_PATH) {
+    _dbPath = process.env.STOCK_TRADING_DB_PATH || process.env.TRADING_DB_PATH!
+  } else {
+    try {
+      const { app } = require('electron')
+      _dbPath = path.join(app.getPath('userData'), 'stock-trading.db')
+    } catch {
+      _dbPath = path.join(process.cwd(), 'stock-trading.db')
+    }
+  }
+  return _dbPath
+}
+
 let db: Database.Database | null = null
 
 const ensureColumns = (
@@ -748,20 +763,21 @@ const isSqliteCorruption = (error: unknown): boolean => {
 
 const quarantineCorruptDatabase = (): string => {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-')
-  const targetDir = path.join(path.dirname(DB_PATH), `corrupt-db-${stamp}`)
+  const dbPath = getDbPath()
+  const targetDir = path.join(path.dirname(dbPath), `corrupt-db-${stamp}`)
   fs.mkdirSync(targetDir, { recursive: true })
 
   for (const suffix of ['', '-wal', '-shm']) {
-    const source = `${DB_PATH}${suffix}`
+    const source = `${dbPath}${suffix}`
     if (!fs.existsSync(source)) continue
-    fs.renameSync(source, path.join(targetDir, `${path.basename(DB_PATH)}${suffix}`))
+    fs.renameSync(source, path.join(targetDir, `${path.basename(dbPath)}${suffix}`))
   }
 
   return targetDir
 }
 
 const openAndInitializeDb = (): Database.Database => {
-  const database = new Database(DB_PATH)
+  const database = new Database(getDbPath())
   try {
     database.pragma('foreign_keys = ON')
     database.pragma('journal_mode = WAL')

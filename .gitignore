@@ -72,3 +72,4 @@ artifacts/*.json
 
 # Claude Code skills
 .trae/
+release/

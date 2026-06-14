@@ -1,0 +1,36 @@
+appId: com.blind-trainer.app
+productName: 盲训
+copyright: Copyright © 2026 Blind Trainer
+
+directories:
+  output: release
+  buildResources: build
+  app: .
+
+electronDist: node_modules/electron/dist
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+
+extraResources:
+  - from: data/blind-seed.db
+    to: blind-seed.db
+    filter: ['**/*']
+  - from: build/icon.png
+    to: icon.png
+
+mac:
+  category: public.app-category.finance
+  target:
+    - target: dir
+      arch:
+        - arm64
+  icon: build/icon.png
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  title: ${productName} ${version}
+  icon: build/icon.png

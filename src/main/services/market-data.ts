@@ -1,6 +1,5 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { app } from 'electron'
 import log from '../logger'
 import { getDb } from '../db'
 
@@ -67,7 +66,17 @@ const API_ENDPOINTS = {
   TENCENT_KLINE: 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get',
 } as const
 
-const CACHE_DIR = path.join(app.getPath('userData'), 'data', 'market')
+let _cacheDir: string | null = null
+const getCacheDir = (): string => {
+  if (_cacheDir) return _cacheDir
+  try {
+    const { app } = require('electron')
+    _cacheDir = path.join(app.getPath('userData'), 'data', 'market')
+  } catch {
+    _cacheDir = path.join(process.cwd(), 'data', 'market')
+  }
+  return _cacheDir
+}
 
 const INTERVAL_TO_TABLE: Record<KlineInterval, string> = {
   '1d': 'kline_daily',
@@ -154,7 +163,7 @@ export class MarketDataService {
   private readonly cacheDir: string
 
   constructor(cacheDir?: string) {
-    this.cacheDir = cacheDir || CACHE_DIR
+    this.cacheDir = cacheDir || getCacheDir()
   }
 
   async getCandles(

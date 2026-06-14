@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import './logger'
 import log from './logger'
-import { closeDb, getDb, DB_PATH } from './db'
+import { closeDb, getDb, getDbPath } from './db'
 import { closeBlindDb } from './blindDb'
 import { registerBlindIpc } from './ipc/blind'
 import { registerDataIpc } from './ipc/data'
@@ -85,6 +85,7 @@ const registerIpcHandlers = () => {
 
 const resolveSeedDbPath = (): string | null => {
   const candidates = [
+    path.join(process.resourcesPath || '', 'blind-seed.db'),
     path.join(process.cwd(), 'data/blind-seed.db'),
     path.join(app.getAppPath(), 'data/blind-seed.db'),
     path.join(__dirname, '../../data/blind-seed.db'),
@@ -107,9 +108,9 @@ const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
   const seedPath = resolveSeedDbPath()
   if (!seedPath) return { needed: false, reason: 'no_seed' }
 
-  const dir = path.dirname(DB_PATH)
+  const dir = path.dirname(getDbPath())
   if (!fs.existsSync(dir)) return { needed: true, reason: 'no_dir' }
-  if (!fs.existsSync(DB_PATH)) return { needed: true, reason: 'no_db' }
+  if (!fs.existsSync(getDbPath())) return { needed: true, reason: 'no_db' }
 
   try {
     const db = getDb()
@@ -144,17 +145,17 @@ const performSeedUpgrade = (seedPath: string): void => {
 
   log.info(`[Init] Upgrading seed DB from ${seedPath} (${(seedStat.size / 1024 / 1024).toFixed(1)} MB)...`)
   closeDb()
-  if (fs.existsSync(DB_PATH)) {
+  if (fs.existsSync(getDbPath())) {
     try {
-      const backupPath = path.join(path.dirname(DB_PATH), `pre-seed-upgrade-${Date.now()}.db`)
-      fs.copyFileSync(DB_PATH, backupPath)
+      const backupPath = path.join(path.dirname(getDbPath()), `pre-seed-upgrade-${Date.now()}.db`)
+      fs.copyFileSync(getDbPath(), backupPath)
       log.info(`[Init] Existing DB backup created: ${backupPath}`)
     } catch (error) {
       log.warn('[Init] Failed to create pre-seed backup:', error)
     }
   }
-  try { fs.unlinkSync(DB_PATH) } catch { /* ignore */ }
-  fs.copyFileSync(seedPath, DB_PATH)
+  try { fs.unlinkSync(getDbPath()) } catch { /* ignore */ }
+  fs.copyFileSync(seedPath, getDbPath())
   log.info('[Init] Seed DB copied.')
 
   const db = getDb()
@@ -182,40 +183,44 @@ const runNetworkInit = async (): Promise<void> => {
   }
 }
 
-app.whenReady().then(async () => {
-  const { needed, reason } = needsSeedUpgrade()
-  log.info(`[Init] Seed upgrade check: needed=${needed}, reason=${reason}`)
+try {
+  app.whenReady().then(async () => {
+    const { needed, reason } = needsSeedUpgrade()
+    log.info(`[Init] Seed upgrade check: needed=${needed}, reason=${reason}`)
 
-  if (!needed) {
-    getDb()
-  }
-
-  registerIpcHandlers()
-  createWindow()
-
-  if (needed) {
-    const seedPath = resolveSeedDbPath()
-    if (seedPath) {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      performSeedUpgrade(seedPath)
-    } else {
-      await runNetworkInit()
+    if (!needed) {
+      getDb()
     }
-  }
 
-  // 盲训 App 不主动同步：仅靠种子数据 + 手动更新（设置页 → 数据管理）
-  // startAutoSync()
-})
-
-app.on('window-all-closed', () => {
-  stopAutoSync()
-  closeBlindDb()
-  closeDb()
-  app.quit()
-})
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+    registerIpcHandlers()
     createWindow()
-  }
-})
+
+    if (needed) {
+      const seedPath = resolveSeedDbPath()
+      if (seedPath) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        performSeedUpgrade(seedPath)
+      } else {
+        await runNetworkInit()
+      }
+    }
+
+    // 盲训 App 不主动同步：仅靠种子数据 + 手动更新（设置页 → 数据管理）
+    // startAutoSync()
+  })
+
+  app.on('window-all-closed', () => {
+    stopAutoSync()
+    closeBlindDb()
+    closeDb()
+    app.quit()
+  })
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
+  })
+} catch {
+  // 非 Electron 环境（electron-builder 构建时加载检查）：安全跳过
+}

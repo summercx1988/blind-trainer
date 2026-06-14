@@ -1,9 +1,25 @@
-import { app } from 'electron'
 import path from 'path'
 import Database from 'better-sqlite3'
 import { getDb } from './db'
 
-export const BLIND_DB_PATH = process.env.STOCK_TRADING_BLIND_DB_PATH || path.join(app.getPath('userData'), 'blind-training.db')
+let _blindDbPath: string | null = null
+
+const resolveBlindDbPath = (): string => {
+  if (_blindDbPath) return _blindDbPath
+  if (process.env.STOCK_TRADING_BLIND_DB_PATH) {
+    _blindDbPath = process.env.STOCK_TRADING_BLIND_DB_PATH
+  } else {
+    try {
+      const { app } = require('electron')
+      _blindDbPath = path.join(app.getPath('userData'), 'blind-training.db')
+    } catch {
+      _blindDbPath = path.join(process.cwd(), 'blind-training.db')
+    }
+  }
+  return _blindDbPath
+}
+
+export const BLIND_DB_PATH = resolveBlindDbPath()
 let blindDb: Database.Database | null = null
 
 const initBlindTables = (database: Database.Database) => {

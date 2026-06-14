@@ -17,7 +17,7 @@ export default defineConfig({
               fileName: () => 'index.cjs',
             },
             rollupOptions: {
-              external: ['better-sqlite3'],
+              external: ['better-sqlite3', 'electron'],
             },
           },
         },
@@ -34,6 +34,9 @@ export default defineConfig({
               entry: 'src/preload/index.ts',
               formats: ['cjs'],
               fileName: () => 'index.cjs',
+            },
+            rollupOptions: {
+              external: ['electron'],
             },
           },
         },
