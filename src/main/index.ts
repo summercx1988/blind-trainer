@@ -48,7 +48,6 @@ function createWindow() {
     width: 1200,
     height: 800,
     icon: iconPath,
-    titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: getPreloadPath(),
     },
