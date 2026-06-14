@@ -1,108 +1,144 @@
 """
-生成盲训 App 图标 (1024x1024 PNG)
+盲训 App 图标 v2 — 简洁专业版
 
 设计理念：
-- 深色圆角方形背景（#1a2332），契合盲训 App 专业交易风格
-- K 线蜡烛图元素（红涨绿跌，A股惯例）
-- 眼罩/遮蔽元素（代表"盲"训——信息遮蔽）
-- 金色描边强调盘感训练的专业性
+- macOS squircle + 深蓝渐变（fintech 风格）
+- 中心：3 根递增阳线（红）+ 斜线遮蔽（代表"盲"训）
+- 金色品牌色点缀
+- 各尺寸清晰可辨
 """
-from PIL import Image, ImageDraw, ImageFilter
-import os
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import os, math
 
 SIZE = 1024
 
+
+def make_squircle_mask(size, radius_ratio=0.22):
+    """生成 macOS squircle 形状的 mask"""
+    mask = Image.new('L', (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    r = int(size * radius_ratio)
+    draw.rounded_rectangle([0, 0, size - 1, size - 1], radius=r, fill=255)
+    return mask
+
+
+def draw_gradient_circle(draw, size, cx, cy, radius, color_inner, color_outer):
+    """画径向渐变"""
+    for r in range(int(radius), 0, -2):
+        t = r / radius
+        cr = int(color_outer[0] * t + color_inner[0] * (1 - t))
+        cg = int(color_outer[1] * t + color_inner[1] * (1 - t))
+        cb = int(color_outer[2] * t + color_inner[2] * (1 - t))
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(cr, cg, cb))
+
+
 def create_icon():
+    # 底层：深蓝渐变背景
+    bg = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    bg_draw = ImageDraw.Draw(bg)
+
+    # 径向渐变：中心偏亮的深蓝 → 外圈深墨蓝
+    center_x, center_y = SIZE * 0.4, SIZE * 0.35
+    for r in range(SIZE, 0, -3):
+        t = r / SIZE
+        cr = int(20 + (1 - t) * 25)
+        cg = int(30 + (1 - t) * 35)
+        cb = int(50 + (1 - t) * 55)
+        bg_draw.ellipse([center_x - r, center_y - r, center_x + r, center_y + r],
+                        fill=(cr, cg, cb, 255))
+
+    squircle_mask = make_squircle_mask(SIZE, 0.22)
     img = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # 圆角方形背景 - macOS Big Sur 风格
-    radius = 225
-    bg_color = (26, 35, 50)  # #1a2332
-    draw.rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=radius, fill=bg_color)
-
-    # 内层渐变背景（模拟）
-    for i in range(120):
-        alpha = int(25 * (1 - i / 120))
-        overlay = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-        od = ImageDraw.Draw(overlay)
-        od.rounded_rectangle([30 + i, 30 + i, SIZE - 31 - i, SIZE - 31 - i], radius=radius - 60, fill=(52, 73, 94, alpha))
-        img = Image.alpha_composite(img, overlay)
+    img.paste(bg, (0, 0), squircle_mask)
     draw = ImageDraw.Draw(img)
 
     cx = SIZE // 2
 
-    # === K 线蜡烛图（3 根，代表走势）===
-    candle_w = 90
-    candle_gap = 50
-    candle_start_x = cx - candle_w - candle_gap
-    candle_y_base = 620
-
-    candles = [
-        # (x_offset, body_top, body_bottom, wick_top, wick_bottom, color)
-        (0, 470, 590, 440, 620, (231, 76, 60)),    # 红色大阳线
-        (candle_w + candle_gap, 380, 520, 340, 550, (231, 76, 60)),  # 红色中阳线
-        (2 * (candle_w + candle_gap), 300, 470, 270, 500, (231, 76, 60)),  # 红色大阳线
+    # === 3 根递增 K 线蜡烛（A股红）===
+    candle_data = [
+        # (center_x_offset, body_top, body_bottom, wick_top, wick_bottom, width)
+        (-170, 560, 700, 520, 740, 80),
+        (0,    430, 590, 390, 630, 80),
+        (170,  300, 480, 260, 520, 80),
     ]
 
-    for ox, body_top, body_bot, wick_top, wick_bot, color in candles:
-        x = candle_start_x + ox
-        # 影线（细线）
-        wick_x = x + candle_w // 2
-        draw.line([(wick_x, wick_top), (wick_x, wick_bot)], fill=color, width=10)
-        # 实体
-        draw.rounded_rectangle([x, body_top, x + candle_w, body_bot], radius=12, fill=color)
+    red = (231, 76, 60)
+    red_dark = (192, 57, 43)
 
-    # === 眼罩/遮蔽元素（代表"盲"训）===
-    # 一条斜向的遮蔽带，从左上到右下穿过
-    mask_y = 200
-    mask_h = 100
+    for ox, bt, bb, wt, wb, cw in candle_data:
+        x = cx + ox - cw // 2
+        wick_x = cx + ox
 
-    # 遮蔽带主体（半透明黑色斜带）
-    band = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(band)
-    # 画一个倾斜的矩形带
-    bd.polygon([
-        (80, mask_y),
-        (SIZE - 80, mask_y - 30),
-        (SIZE - 80, mask_y + mask_h - 30),
-        (80, mask_y + mask_h),
-    ], fill=(0, 0, 0, 180))
-    band = band.filter(ImageFilter.GaussianBlur(radius=3))
-    img = Image.alpha_composite(img, band)
+        # 影线
+        draw.line([(wick_x, wt), (wick_x, wb)], fill=red, width=12)
 
-    # 遮蔽带上的金色文字 "BLIND"
+        # 实体（圆角矩形 + 上浅下深）
+        for i in range(bb - bt):
+            t = i / (bb - bt)
+            cr = int(red[0] * (1 - t * 0.3))
+            cg = int(red[1] * (1 - t * 0.3))
+            cb2 = int(red[2] * (1 - t * 0.3))
+            draw.line([(x, bt + i), (x + cw, bt + i)], fill=(cr, cg, cb2))
+        draw.rounded_rectangle([x, bt, x + cw, bb], radius=10, outline=red_dark, width=2)
+
+    # === "盲"训遮蔽带：金色半透明斜线穿过 K 线区域 ===
+    overlay = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+
+    # 主斜线（左下到右上方向，穿过 K 线中部）
+    line_y = 420
+    od.line([(120, line_y + 60), (SIZE - 120, line_y - 60)],
+            fill=(233, 178, 55, 220), width=24)
+
+    # 斜线两端的小圆点
+    od.ellipse([108, line_y + 48, 140, line_y + 80], fill=(233, 178, 55, 255))
+    od.ellipse([SIZE - 140, line_y - 72, SIZE - 108, line_y - 40], fill=(233, 178, 55, 255))
+
+    overlay = overlay.filter(ImageFilter.GaussianBlur(radius=1))
+    img = Image.alpha_composite(img, overlay)
     draw = ImageDraw.Draw(img)
-    # 用简单的矩形模拟文字笔画的不可行，改用符号化设计
-    # 在遮蔽带中央画一个眼睛被遮挡的图标
-    eye_cx = cx
-    eye_cy = mask_y + mask_h // 2 - 10
 
-    # 眼睛轮廓（椭圆）
-    draw.ellipse([eye_cx - 80, eye_cy - 30, eye_cx + 80, eye_cy + 30],
-                 outline=(212, 175, 55), width=6)
+    # === 底部品牌标识：3 个小点 ===
+    dot_colors = [(52, 152, 219), (233, 178, 55), (231, 76, 60)]
+    for i, color in enumerate(dot_colors):
+        dx = cx - 70 + i * 70
+        draw.ellipse([dx - 14, 810, dx + 14, 838], fill=color + (230,))
 
-    # 眼睛中间的斜线（表示遮蔽/划掉）
-    draw.line([(eye_cx - 100, eye_cy - 45), (eye_cx + 100, eye_cy + 45)],
-              fill=(212, 175, 55), width=8)
+    # === 外边框（金色细线）===
+    border_overlay = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(border_overlay)
+    bd.rounded_rectangle([6, 6, SIZE - 7, SIZE - 7], radius=int(SIZE * 0.22) - 6,
+                         outline=(233, 178, 55, 80), width=3)
+    img = Image.alpha_composite(img, border_overlay)
 
-    # === 金色描边边框 ===
-    border = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-    bd2 = ImageDraw.Draw(border)
-    bd2.rounded_rectangle([8, 8, SIZE - 9, SIZE - 9], radius=radius - 8,
-                          outline=(212, 175, 55, 200), width=4)
-    img = Image.alpha_composite(img, border)
+    # 应用 squircle mask
+    result = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    result.paste(img, (0, 0), squircle_mask)
 
-    # === 底部文字区域装饰线 ===
-    draw = ImageDraw.Draw(img)
-    draw.line([(120, 720), (SIZE - 120, 720)], fill=(212, 175, 55, 120), width=2)
+    return result
 
-    # 底部三个小点代表"训练等级"
-    for i, color in enumerate([(52, 152, 219), (212, 175, 55), (231, 76, 60)]):
-        dot_x = cx - 60 + i * 60
-        draw.ellipse([dot_x - 16, 760, dot_x + 16, 792], fill=color + (220,))
 
-    return img
+def generate_icns(icon_1024, out_dir):
+    """用 iconutil 生成 .icns"""
+    iconset_dir = os.path.join(out_dir, 'icon.iconset')
+    os.makedirs(iconset_dir, exist_ok=True)
+
+    sizes = [16, 32, 64, 128, 256, 512, 1024]
+    for sz in sizes:
+        resized = icon_1024.resize((sz, sz), Image.LANCZOS)
+        resized.save(os.path.join(iconset_dir, f'icon_{sz}x{sz}.png'), 'PNG')
+        if sz <= 512:
+            retina_sz = sz * 2
+            retina = icon_1024.resize((retina_sz, retina_sz), Image.LANCZOS)
+            retina.save(os.path.join(iconset_dir, f'icon_{sz}x{sz}@2x.png'), 'PNG')
+
+    icns_path = os.path.join(out_dir, 'icon.icns')
+    os.system(f'iconutil -c icns "{iconset_dir}" -o "{icns_path}"')
+    if os.path.exists(icns_path):
+        print(f'.icns generated: {icns_path}')
+    else:
+        print('WARNING: iconutil failed, .icns not created')
+    return icns_path
 
 
 if __name__ == '__main__':
@@ -110,12 +146,17 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     icon = create_icon()
-    out_path = os.path.join(out_dir, 'icon.png')
-    icon.save(out_path, 'PNG')
-    print(f'Icon saved to {out_path} ({icon.size[0]}x{icon.size[1]})')
 
-    # 生成小尺寸预览
+    # 主图标 PNG
+    icon_path = os.path.join(out_dir, 'icon.png')
+    icon.save(icon_path, 'PNG')
+    print(f'Icon saved: {icon_path} ({icon.size[0]}x{icon.size[1]})')
+
+    # 各尺寸
     for sz in [512, 256, 128, 64, 32, 16]:
         small = icon.resize((sz, sz), Image.LANCZOS)
         small.save(os.path.join(out_dir, f'icon-{sz}.png'), 'PNG')
-    print('All sizes generated.')
+
+    # 生成 .icns
+    generate_icns(icon, out_dir)
+    print('Done.')

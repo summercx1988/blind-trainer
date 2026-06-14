@@ -40,13 +40,23 @@ function getRendererIndexPath(): string {
 }
 
 function createWindow() {
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.png')
+    : path.join(app.getAppPath(), 'build', 'icon.png')
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: iconPath,
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: getPreloadPath(),
     },
   })
+
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    app.dock?.setIcon(iconPath)
+  }
 
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)

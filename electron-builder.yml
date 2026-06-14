@@ -27,7 +27,7 @@ mac:
     - target: dir
       arch:
         - arm64
-  icon: build/icon.png
+  icon: build/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
 
