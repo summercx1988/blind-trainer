@@ -644,6 +644,41 @@
   font-weight: 500;
 }
 
+.wt-settings-feedback {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-bg);
+  border: 1px solid #a7f3d0;
+  color: var(--color-brand);
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: wt-fade-in 200ms ease-out;
+}
+
+.wt-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
+  transition: all 0.15s;
+}
+
+.wt-tooltip-trigger:hover {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fff;
+}
+
 .wt-price-filter {
   display: flex;
   align-items: center;

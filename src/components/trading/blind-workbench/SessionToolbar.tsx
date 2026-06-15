@@ -46,6 +46,7 @@ interface SessionToolbarProps {
     minPrice: number
   }) => void
   onLoadMoreBars: () => void
+  settingsFeedback?: string
 }
 
 interface DraftSettings {
@@ -154,7 +155,10 @@ const SettingsPanel = ({
           </div>
         </div>
         <div className="wt-filter-group">
-          <span className="wt-filter-label">样本池深度</span>
+          <span className="wt-filter-label">
+            样本池深度
+            <span className="wt-tooltip-trigger" title="每只股票最多取多少根 K 线参与训练。数值越大，可训练的历史越深，但加载越慢。520 根约等于 2 年日线。">?</span>
+          </span>
           <div className="wt-period-btns wt-sample-depth-btns">
             {SAMPLE_POOL_BAR_OPTIONS.map((value) => (
               <button
@@ -169,7 +173,10 @@ const SettingsPanel = ({
           </div>
         </div>
         <div className="wt-filter-group">
-          <span className="wt-filter-label">抽样范围</span>
+          <span className="wt-filter-label">
+            抽样范围
+            <span className="wt-tooltip-trigger" title="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。建议日常训练使用 80~200 只。">?</span>
+          </span>
           <div className="wt-period-btns">
             {SAMPLE_CANDIDATE_OPTIONS.map((option) => (
               <button
@@ -256,7 +263,8 @@ const SessionToolbar = ({
   onFinishSession,
   onStartTraining,
   onApplySettings,
-  onLoadMoreBars
+  onLoadMoreBars,
+  settingsFeedback
 }: SessionToolbarProps) => {
   const initialSettings = useMemo<DraftSettings>(() => ({
     period,
@@ -340,6 +348,10 @@ const SessionToolbar = ({
           onApplySettings={onApplySettings}
           onLoadMoreBars={onLoadMoreBars}
         />
+      )}
+
+      {settingsFeedback && (
+        <div className="wt-settings-feedback">{settingsFeedback}</div>
       )}
     </>
   )

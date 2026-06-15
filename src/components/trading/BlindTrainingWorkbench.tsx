@@ -85,6 +85,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [candidateCount, setCandidateCount] = useState(500)
   const [minPrice, setMinPrice] = useState(0)
   const [extendingSample, setExtendingSample] = useState(false)
+  const [settingsFeedback, setSettingsFeedback] = useState('')
 
   const activeProfile = usePlatformStore((s) => s.activeProfile)
   const fetchActiveProfile = usePlatformStore((s) => s.fetchActiveProfile)
@@ -1053,9 +1054,14 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               setMinPrice(settings.minPrice)
               if (sessionStatus === 'idle') {
                 setInitialized(false)
+                setSettingsFeedback('配置已应用，正在重新加载样本…')
+              } else {
+                setSettingsFeedback('配置已保存，将在下次新训练中生效。')
               }
+              setTimeout(() => setSettingsFeedback(''), 4000)
             }}
             onLoadMoreBars={() => void extendActiveSample()}
+            settingsFeedback={settingsFeedback}
           />
 
           {activeSample && currentBar && sessionStatus === 'running' && (
