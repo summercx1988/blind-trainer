@@ -664,13 +664,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         realizedPnl: execution.trade.realizedPnl
       })
 
-      await persistTradeAction(execution.trade, executionBarIndex)
-
-      if (actionType === 'skip') {
-        await finishSession('skip', execution.nextState)
-        return
-      }
-
+      // 先推进 UI（K线必须前进），再异步持久化
       if (shouldUseNextOpen) {
         if (targetSample !== activeSampleRef.current) {
           activeSampleRef.current = targetSample
@@ -679,12 +673,27 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         currentBarIndexRef.current = executionBarIndex
         currentBarRef.current = targetSample.klines[executionBarIndex] || currentBarRef.current
         setCurrentBarIndex(executionBarIndex)
+      }
+
+      // 持久化失败不影响 UI 推进
+      try {
+        await persistTradeAction(execution.trade, executionBarIndex)
+      } catch (persistError) {
+        console.error('持久化交易动作失败:', persistError)
+        window.electronAPI?.log?.('error', '[WT] persistTradeAction failed', { error: String(persistError) })
+      }
+
+      if (actionType === 'skip') {
+        await finishSession('skip', execution.nextState)
         return
       }
 
-      await stepForward(execution.nextState)
+      if (!shouldUseNextOpen) {
+        await stepForward(execution.nextState)
+      }
     } catch (error) {
       console.error('执行动作失败:', error)
+      window.electronAPI?.log?.('error', '[WT] runAction failed', { error: String(error) })
       setActionError('动作提交失败，请重试。')
     } finally {
       setActionPending(false)
