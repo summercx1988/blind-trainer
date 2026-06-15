@@ -299,6 +299,8 @@ const BaseKlineChart = ({
     const chart = chartRef.current
     if (!chart || data.length === 0) return
 
+    // 强制刷新：先清空数据再注册新 loader（klinecharts v10 不会主动重新拉取）
+    chart.resetData()
     chart.setDataLoader({
       getBars: handleGetBars
     })
@@ -315,7 +317,6 @@ const BaseKlineChart = ({
       }
     } else if (visibleCount && visibleCount > 0) {
       setTimeout(() => {
-        // 滚动到包含最后一根数据的位置，但保证最后几根可见
         const lastIdx = data.length - 1
         const scrollTo = Math.max(0, lastIdx - Math.min(visibleCount, data.length) + 5)
         chart.scrollToDataIndex(scrollTo)

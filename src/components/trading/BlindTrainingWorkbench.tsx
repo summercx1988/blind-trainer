@@ -23,7 +23,7 @@ import {
   settleAtSessionEnd
 } from './blind/tradingEngine'
 import ContinuousBar from './blind-workbench/ContinuousBar'
-import SessionToolbar from './blind-workbench/SessionToolbar'
+import SessionToolbar, { DEFAULT_WORKBENCH_SETTINGS } from './blind-workbench/SessionToolbar'
 import AccountOverview from './blind-workbench/AccountOverview'
 import ActionSection from './blind-workbench/ActionSection'
 import ActionLog from './blind-workbench/ActionLog'
@@ -34,6 +34,7 @@ import './BlindTrainingWorkbench.css'
 import '../../types/global.d'
 
 const INITIAL_CAPITAL = DEFAULT_TRADING_CONFIG.initialCapital
+const SAMPLE_POOL_BARS = 520
 
 interface SampleExtensionResult {
   loaded: boolean
@@ -80,10 +81,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [dataReady, setDataReady] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [initialized, setInitialized] = useState(false)
-  const [visibleCount, setVisibleCount] = useState(60)
-  const [samplePoolBars, setSamplePoolBars] = useState(520)
+  const [visibleCount, setVisibleCount] = useState(120)
   const [candidateCount, setCandidateCount] = useState(500)
   const [, setPrefsLoaded] = useState(false)
+  const prefsLoadedRef = useRef(false)
 
   // 加载持久化的训练配置
   useEffect(() => {
@@ -92,10 +93,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       try {
         const prefs = (await window.electronAPI?.db?.getPreference('workbench_settings_v1')) as Record<string, unknown> | null
         if (cancelled || !prefs) return
-        if (typeof prefs.samplePoolBars === 'number' && [260, 520, 1040, 1560].includes(prefs.samplePoolBars)) {
-          setSamplePoolBars(prefs.samplePoolBars)
-        }
-        if (typeof prefs.candidateCount === 'number' && [80, 200, 500, 1000, 2000].includes(prefs.candidateCount)) {
+        if (typeof prefs.candidateCount === 'number' && [200, 500, 1000, 2000].includes(prefs.candidateCount)) {
           setCandidateCount(prefs.candidateCount)
         }
         if (typeof prefs.minPrice === 'number' && prefs.minPrice >= 0) {
@@ -107,7 +105,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       } catch (error) {
         console.error('加载训练配置失败:', error)
       } finally {
-        if (!cancelled) setPrefsLoaded(true)
+        if (!cancelled) {
+          setPrefsLoaded(true)
+          prefsLoadedRef.current = true
+        }
       }
     }
     void loadPrefs()
@@ -132,7 +133,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const requestRandomSamples = useCallback(async (
     targetRegime: string,
     targetPeriod: PeriodType,
-    barsPerSymbol: number = samplePoolBars
+    barsPerSymbol: number = SAMPLE_POOL_BARS
   ) => {
     const raw = await window.electronAPI?.data?.getRandomSamples(targetRegime, targetPeriod, candidateCount, {
       maxBarsPerSymbol: barsPerSymbol,
@@ -142,7 +143,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       minPrice
     })
     return parseSamples(raw, targetPeriod)
-  }, [activeProfile?.id, candidateCount, minPrice, parseSamples, samplePoolBars])
+  }, [activeProfile?.id, candidateCount, minPrice, parseSamples])
 
   const loadSamples = useCallback(async () => {
     setSampleLoading(true)
@@ -182,6 +183,12 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       setInitialized(true)
     }
   }, [initialized, loadSamples])
+
+  // 持久化热生效设置（visibleCount 等）
+  useEffect(() => {
+    if (!prefsLoadedRef.current) return
+    void window.electronAPI?.db?.savePreference('workbench_settings_v1', { visibleCount })
+  }, [visibleCount])
 
   useEffect(() => {
     void fetchActiveProfile()
@@ -893,11 +900,26 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     handleReset()
   }, [handleReset])
 
-  const handleSamplePoolBarsChange = useCallback((nextValue: number) => {
-    setSamplePoolBars(nextValue)
+  const handleResetSettings = useCallback(() => {
+    setRegime(DEFAULT_WORKBENCH_SETTINGS.regime)
+    setContinuousMode(DEFAULT_WORKBENCH_SETTINGS.continuousMode)
+    setExecutionMode(DEFAULT_WORKBENCH_SETTINGS.executionMode)
+    setCandidateCount(DEFAULT_WORKBENCH_SETTINGS.candidateCount)
+    setMinPrice(DEFAULT_WORKBENCH_SETTINGS.minPrice)
+    setVisibleCount(DEFAULT_WORKBENCH_SETTINGS.visibleCount)
+    void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
+      regime: DEFAULT_WORKBENCH_SETTINGS.regime,
+      continuousMode: DEFAULT_WORKBENCH_SETTINGS.continuousMode,
+      executionMode: DEFAULT_WORKBENCH_SETTINGS.executionMode,
+      candidateCount: DEFAULT_WORKBENCH_SETTINGS.candidateCount,
+      minPrice: DEFAULT_WORKBENCH_SETTINGS.minPrice,
+      visibleCount: DEFAULT_WORKBENCH_SETTINGS.visibleCount
+    })
     if (sessionStatus === 'idle') {
       setInitialized(false)
     }
+    setSettingsFeedback('已恢复默认配置。')
+    setTimeout(() => setSettingsFeedback(''), 4000)
   }, [sessionStatus])
 
   // Auto-save running session on unmount (page switch)
@@ -1067,26 +1089,23 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
             continuousMode={continuousMode}
             executionMode={executionMode}
             actionPending={actionPending || extendingSample}
-            samplePoolBars={samplePoolBars}
             candidateCount={candidateCount}
             minPrice={minPrice}
             activeSampleLoadedBars={activeSample?.klines.length || 0}
             activeSampleTotalBars={activeSample?.totalAvailableBars}
-            loadingMoreBars={extendingSample}
             onToggleSettings={() => setShowSettings((value) => !value)}
             onFinishSession={() => void finishSession('manual')}
             onStartTraining={() => void startRandomSession()}
+            onResetSettings={handleResetSettings}
             onApplySettings={(settings) => {
               setPeriod(settings.period)
               setRegime(settings.regime)
               setContinuousMode(settings.continuousMode)
               setExecutionMode(settings.executionMode)
-              handleSamplePoolBarsChange(settings.samplePoolBars)
               setCandidateCount(settings.candidateCount)
               setMinPrice(settings.minPrice)
               // 持久化训练配置（退出后下次进入仍生效）
               void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
-                samplePoolBars: settings.samplePoolBars,
                 candidateCount: settings.candidateCount,
                 minPrice: settings.minPrice,
                 period: settings.period,
@@ -1102,7 +1121,6 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               }
               setTimeout(() => setSettingsFeedback(''), 4000)
             }}
-            onLoadMoreBars={() => void extendActiveSample()}
             settingsFeedback={settingsFeedback}
           />
 
@@ -1117,8 +1135,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 visibleBars={visibleBars}
                 tradeMarkers={visibleTradeMarkers}
                 visibleCount={visibleCount}
-                onDecreaseVisibleCount={() => setVisibleCount((value) => Math.max(20, value - 10))}
-                onIncreaseVisibleCount={() => setVisibleCount((value) => Math.min(200, value + 10))}
+                onVisibleCountChange={setVisibleCount}
               />
 
               <ActionSection

@@ -20,8 +20,7 @@ interface AccountOverviewProps {
   tradeMarkers: TradeMarker[]
   benchmarkMarkers?: BaseMarker[]
   visibleCount: number
-  onDecreaseVisibleCount: () => void
-  onIncreaseVisibleCount: () => void
+  onVisibleCountChange: (value: number) => void
 }
 
 const AccountOverview = ({
@@ -34,8 +33,7 @@ const AccountOverview = ({
   tradeMarkers,
   benchmarkMarkers,
   visibleCount,
-  onDecreaseVisibleCount,
-  onIncreaseVisibleCount
+  onVisibleCountChange
 }: AccountOverviewProps) => {
   const prevBar = visibleBars.length >= 2 ? visibleBars[visibleBars.length - 2] : null
   const changePct = prevBar && prevBar.close > 0
@@ -99,9 +97,17 @@ const AccountOverview = ({
           <div className="wt-info-item wt-visible-count-item">
             <span className="wt-info-label">K线数量</span>
             <div className="wt-visible-count-ctrl">
-              <button className="wt-vc-btn" onClick={onDecreaseVisibleCount}>-</button>
+              <input
+                type="range"
+                className="wt-vc-slider"
+                min={20}
+                max={200}
+                step={1}
+                value={visibleCount}
+                onChange={(e) => onVisibleCountChange(Number(e.target.value))}
+                aria-label="K线可见数量"
+              />
               <span className="wt-vc-val">{visibleCount}</span>
-              <button className="wt-vc-btn" onClick={onIncreaseVisibleCount}>+</button>
             </div>
           </div>
         </div>

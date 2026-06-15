@@ -14,3 +14,14 @@ export const REGIME_COLOR_MAP: Record<string, string> = {
   mixed: '#6f7f9b',
   fallback: '#95a5a6'
 }
+
+export const CANDIDATE_COUNT_OPTIONS = [200, 500, 1000, 2000]
+
+export const DEFAULT_WORKBENCH_SETTINGS = {
+  regime: 'mixed',
+  continuousMode: false,
+  executionMode: 'next_open' as const,
+  candidateCount: 500,
+  minPrice: 0,
+  visibleCount: 120
+}

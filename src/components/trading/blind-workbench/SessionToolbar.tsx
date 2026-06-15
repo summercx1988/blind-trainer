@@ -1,17 +1,11 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { ExecutionMode, PeriodType, SessionStatus, TrainingSample } from '../blind/types'
-import { REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
+import { CANDIDATE_COUNT_OPTIONS, DEFAULT_WORKBENCH_SETTINGS, REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
 import { CheckIcon, GearIcon } from '../../common/Icons'
-const SAMPLE_POOL_BAR_OPTIONS = [260, 520, 1040, 1560]
-const SAMPLE_CANDIDATE_OPTIONS = [
-  { value: 40, label: '40只' },
-  { value: 80, label: '80只' },
-  { value: 200, label: '200只' },
-  { value: 500, label: '500只' }
-]
-const EXECUTION_MODE_OPTIONS: { value: ExecutionMode; label: string }[] = [
-  { value: 'close', label: '盘尾收盘' },
-  { value: 'next_open', label: '次根开盘' }
+
+const EXECUTION_MODE_OPTIONS: { value: ExecutionMode; label: string; tooltip: string }[] = [
+  { value: 'close', label: '当天收盘价', tooltip: '以当前 K 线（t 时刻）的收盘价成交。适合模拟尾盘买入/卖出。' },
+  { value: 'next_open', label: '次日开盘价', tooltip: '以下一根 K 线（t+1 时刻）的开盘价成交。更接近真实交易。' }
 ]
 
 interface SessionToolbarProps {
@@ -27,25 +21,22 @@ interface SessionToolbarProps {
   continuousMode: boolean
   executionMode: ExecutionMode
   actionPending: boolean
-  samplePoolBars: number
   candidateCount: number
   minPrice: number
   activeSampleLoadedBars: number
   activeSampleTotalBars?: number
-  loadingMoreBars: boolean
   onToggleSettings: () => void
   onFinishSession: () => void
   onStartTraining: () => void
+  onResetSettings: () => void
   onApplySettings: (settings: {
     period: PeriodType
     regime: string
     continuousMode: boolean
     executionMode: ExecutionMode
-    samplePoolBars: number
     candidateCount: number
     minPrice: number
   }) => void
-  onLoadMoreBars: () => void
   settingsFeedback?: string
 }
 
@@ -54,7 +45,6 @@ interface DraftSettings {
   regime: string
   continuousMode: boolean
   executionMode: ExecutionMode
-  samplePoolBars: number
   candidateCount: number
   minPrice: number
 }
@@ -62,11 +52,9 @@ interface DraftSettings {
 interface SettingsPanelProps {
   initialSettings: DraftSettings
   sampleLoading: boolean
-  loadingMoreBars: boolean
   actionPending: boolean
-  activeSample: TrainingSample | null
   onApplySettings: SessionToolbarProps['onApplySettings']
-  onLoadMoreBars: () => void
+  onResetSettings: () => void
 }
 
 const createDraftSettings = (settings: DraftSettings): DraftSettings => ({ ...settings })
@@ -74,11 +62,9 @@ const createDraftSettings = (settings: DraftSettings): DraftSettings => ({ ...se
 const SettingsPanel = ({
   initialSettings,
   sampleLoading,
-  loadingMoreBars,
   actionPending,
-  activeSample,
   onApplySettings,
-  onLoadMoreBars
+  onResetSettings
 }: SettingsPanelProps) => {
   const [draftSettings, setDraftSettings] = useState(() => createDraftSettings(initialSettings))
 
@@ -87,7 +73,6 @@ const SettingsPanel = ({
     draftSettings.regime !== initialSettings.regime ||
     draftSettings.continuousMode !== initialSettings.continuousMode ||
     draftSettings.executionMode !== initialSettings.executionMode ||
-    draftSettings.samplePoolBars !== initialSettings.samplePoolBars ||
     draftSettings.candidateCount !== initialSettings.candidateCount ||
     draftSettings.minPrice !== initialSettings.minPrice
 
@@ -95,24 +80,13 @@ const SettingsPanel = ({
     onApplySettings(draftSettings)
   }
 
+  const handleReset = () => {
+    onResetSettings()
+  }
+
   return (
     <div className="wt-settings-bar">
       <div className="wt-settings-row">
-        <div className="wt-filter-group">
-          <span className="wt-filter-label">周期</span>
-          <div className="wt-period-btns">
-            {(['1d'] as PeriodType[]).map((item) => (
-              <button
-                key={item}
-                className={`wt-period-btn ${draftSettings.period === item ? 'active' : ''}`}
-                onClick={() => setDraftSettings((current) => ({ ...current, period: item }))}
-                disabled={sampleLoading}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="wt-filter-group">
           <span className="wt-filter-label">走势筛选</span>
           <div className="wt-regime-btns">
@@ -140,7 +114,10 @@ const SettingsPanel = ({
           </label>
         </div>
         <div className="wt-filter-group">
-          <span className="wt-filter-label">成交模式</span>
+          <span className="wt-filter-label">
+            成交价
+            <span className="wt-tooltip-trigger" data-tooltip="决定买入/卖出的成交价格。">?</span>
+          </span>
           <div className="wt-period-btns">
             {EXECUTION_MODE_OPTIONS.map((option) => (
               <button
@@ -148,26 +125,9 @@ const SettingsPanel = ({
                 className={`wt-period-btn ${draftSettings.executionMode === option.value ? 'active' : ''}`}
                 onClick={() => setDraftSettings((current) => ({ ...current, executionMode: option.value }))}
                 disabled={actionPending}
+                title={option.tooltip}
               >
                 {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="wt-filter-group">
-          <span className="wt-filter-label">
-            样本池深度
-            <span className="wt-tooltip-trigger" data-tooltip="每只股票最多取多少根 K 线参与训练。数值越大，可训练的历史越深，但加载越慢。520 根约等于 2 年日线。">?</span>
-          </span>
-          <div className="wt-period-btns wt-sample-depth-btns">
-            {SAMPLE_POOL_BAR_OPTIONS.map((value) => (
-              <button
-                key={value}
-                className={`wt-period-btn ${draftSettings.samplePoolBars === value ? 'active' : ''}`}
-                onClick={() => setDraftSettings((current) => ({ ...current, samplePoolBars: value }))}
-                disabled={sampleLoading || loadingMoreBars}
-              >
-                {value}
               </button>
             ))}
           </div>
@@ -175,17 +135,17 @@ const SettingsPanel = ({
         <div className="wt-filter-group">
           <span className="wt-filter-label">
             抽样范围
-            <span className="wt-tooltip-trigger" data-tooltip="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。建议日常训练使用 80~200 只。">?</span>
+            <span className="wt-tooltip-trigger" data-tooltip="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。">?</span>
           </span>
           <div className="wt-period-btns">
-            {SAMPLE_CANDIDATE_OPTIONS.map((option) => (
+            {CANDIDATE_COUNT_OPTIONS.map((value) => (
               <button
-                key={option.value}
-                className={`wt-period-btn ${draftSettings.candidateCount === option.value ? 'active' : ''}`}
-                onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: option.value }))}
+                key={value}
+                className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
+                onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
                 disabled={sampleLoading}
               >
-                {option.label}
+                {value}
               </button>
             ))}
           </div>
@@ -208,20 +168,16 @@ const SettingsPanel = ({
             过滤低价股，只选最新收盘价 ≥ 该值的股票。0 表示不限。
           </div>
         </div>
-        {activeSample && (
-          <div className="wt-filter-group">
-            <span className="wt-filter-label">当前样本</span>
-            <button
-              className="wt-load-more-btn"
-              onClick={onLoadMoreBars}
-              disabled={loadingMoreBars}
-            >
-              {loadingMoreBars ? '补载中...' : '补载更多 K 线'}
-            </button>
-          </div>
-        )}
       </div>
       <div className="wt-settings-footer">
+        <button
+          className="wt-btn wt-btn-secondary"
+          onClick={handleReset}
+          disabled={sampleLoading}
+        >
+          恢复默认
+        </button>
+        {hasChanges && <span className="wt-settings-hint">有未应用的更改</span>}
         <button
           className="wt-btn wt-btn-primary"
           onClick={handleApply}
@@ -230,11 +186,10 @@ const SettingsPanel = ({
           {hasChanges ? (
             <span className="wt-btn-icon-text">
               <CheckIcon size={14} />
-              <span>应用设置</span>
+              <span>应用配置</span>
             </span>
           ) : '设置已同步'}
         </button>
-        {hasChanges && <span className="wt-settings-hint">有未应用的更改</span>}
       </div>
     </div>
   )
@@ -253,17 +208,15 @@ const SessionToolbar = ({
   continuousMode,
   executionMode,
   actionPending,
-  samplePoolBars,
   candidateCount,
   minPrice,
   activeSampleLoadedBars,
   activeSampleTotalBars,
-  loadingMoreBars,
   onToggleSettings,
   onFinishSession,
   onStartTraining,
   onApplySettings,
-  onLoadMoreBars,
+  onResetSettings,
   settingsFeedback
 }: SessionToolbarProps) => {
   const initialSettings = useMemo<DraftSettings>(() => ({
@@ -271,10 +224,9 @@ const SessionToolbar = ({
     regime,
     continuousMode,
     executionMode,
-    samplePoolBars,
     candidateCount,
     minPrice
-  }), [period, regime, continuousMode, executionMode, samplePoolBars, candidateCount, minPrice])
+  }), [period, regime, continuousMode, executionMode, candidateCount, minPrice])
 
   const settingsKey = useMemo(
     () => JSON.stringify(initialSettings),
@@ -297,7 +249,7 @@ const SessionToolbar = ({
           {activeSample && (
             <span className="wt-bar-counter">Bar {currentBarIndex + 1}/{activeSample.klines.length}</span>
           )}
-          <span className="wt-session-tag">{executionMode === 'close' ? '盘尾收盘' : '次根开盘'}</span>
+          <span className="wt-session-tag">{executionMode === 'close' ? '当天收盘' : '次日开盘'}</span>
           {activeSample && activeSampleTotalBars != null && activeSampleTotalBars > 0 && (
             <span className="wt-bar-counter">已加载 {activeSampleLoadedBars}/{activeSampleTotalBars}</span>
           )}
@@ -342,11 +294,9 @@ const SessionToolbar = ({
           key={settingsKey}
           initialSettings={initialSettings}
           sampleLoading={sampleLoading}
-          loadingMoreBars={loadingMoreBars}
           actionPending={actionPending}
-          activeSample={activeSample}
           onApplySettings={onApplySettings}
-          onLoadMoreBars={onLoadMoreBars}
+          onResetSettings={onResetSettings}
         />
       )}
 
@@ -357,4 +307,5 @@ const SessionToolbar = ({
   )
 }
 
+export { DEFAULT_WORKBENCH_SETTINGS }
 export default SessionToolbar
