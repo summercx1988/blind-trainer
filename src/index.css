@@ -2,13 +2,58 @@
   font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #142033;
-  background-color: #f4f7fb;
+  color: #1a1d23;
+  background-color: #f0f1f3;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   --font-mono: 'JetBrains Mono', 'Roboto Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* === Design Tokens === */
+  /* Backgrounds */
+  --bg-page: #f0f1f3;
+  --bg-card: #fdfdfd;
+  --bg-card-hover: #f8f9fa;
+  --bg-input: #ffffff;
+  --bg-subtle: #f7f8fa;
+
+  /* Text */
+  --text-primary: #1a1d23;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  /* Borders */
+  --border: #e5e7eb;
+  --border-light: #f0f1f3;
+
+  /* Brand & Action Colors */
+  --color-up: #dc2626;
+  --color-down: #16a34a;
+  --color-brand: #0f766e;
+  --color-brand-bg: #f0fdfa;
+  --color-brand-dark: #0c5d56;
+  --color-accent: #2563eb;
+  --color-accent-bg: #eff6ff;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+
+  /* Shadows (whisper, not shout) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Dark card (account summary) */
+  --dark-bg: #1a1d23;
+  --dark-text: #f3f4f6;
+  --dark-text-secondary: rgba(243, 244, 246, 0.6);
+  --dark-border: rgba(255, 255, 255, 0.1);
 }
 
 *,
@@ -25,7 +70,7 @@ body {
 }
 
 body {
-  background: #f4f7fb;
+  background: var(--bg-page);
 }
 
 #root {
