@@ -163,7 +163,9 @@ const performSeedUpgrade = (seedPath: string): void => {
       log.warn('[Init] Failed to create pre-seed backup:', error)
     }
   }
-  try { fs.unlinkSync(getDbPath()) } catch { /* ignore */ }
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.unlinkSync(`${getDbPath()}${suffix}`) } catch { /* ignore */ }
+  }
   fs.copyFileSync(seedPath, getDbPath())
   log.info('[Init] Seed DB copied.')
 
