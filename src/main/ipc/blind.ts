@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import log from '../logger'
 import { getBlindDb } from '../blindDb'
+import { getDb } from '../db'
 import { calculateSessionReviewMetrics } from '../sessionReview'
 import type {
   SaveSessionInput,
@@ -386,6 +387,35 @@ export const registerBlindIpc = () => {
   ipcMain.handle('db:saveTradeAction', async (_, action) => saveTradeActionToDb(action))
 
   ipcMain.handle('db:getSessionActions', async (_, sessionId) => getSessionActionsFromDb(sessionId))
+
+  ipcMain.handle('db:getPreference', async (_, key: string) => {
+    try {
+      const row = getDb()
+        .prepare('SELECT value_json FROM app_preferences WHERE key = ? LIMIT 1')
+        .get(key) as { value_json?: string } | undefined
+      if (!row?.value_json) return null
+      return JSON.parse(row.value_json)
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('db:savePreference', async (_, key: string, value: unknown) => {
+    try {
+      const now = Math.floor(Date.now() / 1000)
+      getDb().prepare(`
+        INSERT INTO app_preferences (key, value_json, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value_json = excluded.value_json,
+          updated_at = excluded.updated_at
+      `).run(key, JSON.stringify(value ?? null), now)
+      return true
+    } catch (error) {
+      console.error('savePreference failed:', error)
+      return false
+    }
+  })
 
   ipcMain.handle('db:getSessionReview', async (_, sessionId) => {
     const database = getBlindDb()

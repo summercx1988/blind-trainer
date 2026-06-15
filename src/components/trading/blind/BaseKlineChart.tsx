@@ -315,7 +315,9 @@ const BaseKlineChart = ({
       }
     } else if (visibleCount && visibleCount > 0) {
       setTimeout(() => {
-        const scrollTo = Math.max(0, data.length - Math.min(visibleCount, data.length))
+        // 滚动到包含最后一根数据的位置，但保证最后几根可见
+        const lastIdx = data.length - 1
+        const scrollTo = Math.max(0, lastIdx - Math.min(visibleCount, data.length) + 5)
         chart.scrollToDataIndex(scrollTo)
       }, 200)
     }

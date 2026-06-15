@@ -83,6 +83,36 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [visibleCount, setVisibleCount] = useState(60)
   const [samplePoolBars, setSamplePoolBars] = useState(520)
   const [candidateCount, setCandidateCount] = useState(500)
+  const [, setPrefsLoaded] = useState(false)
+
+  // 加载持久化的训练配置
+  useEffect(() => {
+    let cancelled = false
+    const loadPrefs = async () => {
+      try {
+        const prefs = (await window.electronAPI?.db?.getPreference('workbench_settings_v1')) as Record<string, unknown> | null
+        if (cancelled || !prefs) return
+        if (typeof prefs.samplePoolBars === 'number' && [260, 520, 1040, 1560].includes(prefs.samplePoolBars)) {
+          setSamplePoolBars(prefs.samplePoolBars)
+        }
+        if (typeof prefs.candidateCount === 'number' && [80, 200, 500, 1000, 2000].includes(prefs.candidateCount)) {
+          setCandidateCount(prefs.candidateCount)
+        }
+        if (typeof prefs.minPrice === 'number' && prefs.minPrice >= 0) {
+          setMinPrice(prefs.minPrice)
+        }
+        if (typeof prefs.visibleCount === 'number' && prefs.visibleCount >= 20 && prefs.visibleCount <= 200) {
+          setVisibleCount(prefs.visibleCount)
+        }
+      } catch (error) {
+        console.error('加载训练配置失败:', error)
+      } finally {
+        if (!cancelled) setPrefsLoaded(true)
+      }
+    }
+    void loadPrefs()
+    return () => { cancelled = true }
+  }, [])
   const [minPrice, setMinPrice] = useState(0)
   const [extendingSample, setExtendingSample] = useState(false)
   const [settingsFeedback, setSettingsFeedback] = useState('')
@@ -1054,6 +1084,16 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               handleSamplePoolBarsChange(settings.samplePoolBars)
               setCandidateCount(settings.candidateCount)
               setMinPrice(settings.minPrice)
+              // 持久化训练配置（退出后下次进入仍生效）
+              void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
+                samplePoolBars: settings.samplePoolBars,
+                candidateCount: settings.candidateCount,
+                minPrice: settings.minPrice,
+                period: settings.period,
+                regime: settings.regime,
+                continuousMode: settings.continuousMode,
+                executionMode: settings.executionMode
+              })
               if (sessionStatus === 'idle') {
                 setInitialized(false)
                 setSettingsFeedback('配置已应用，正在重新加载样本…')

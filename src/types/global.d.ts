@@ -42,6 +42,8 @@ declare global {
         getSessionReview: (sessionId: string) => Promise<SessionReview | null>
         exportLabelsCSV: (sessionId: string) => Promise<string>
         listSessions: () => Promise<SessionSummary[]>
+        getPreference: (key: string) => Promise<unknown>
+        savePreference: (key: string, value: unknown) => Promise<boolean>
       }
       profile?: {
         list: () => Promise<UnknownRecord[]>

@@ -49,7 +49,9 @@ const electronAPI = {
     getSessionActions: (sessionId: string): Promise<SessionActionRecord[]> => invoke('db:getSessionActions', sessionId),
     getSessionReview: (sessionId: string): Promise<SessionReview | null> => invoke('db:getSessionReview', sessionId),
     exportLabelsCSV: (sessionId: string): Promise<string> => invoke('db:exportLabelsCSV', sessionId),
-    listSessions: (): Promise<SessionSummary[]> => invoke('db:listSessions')
+    listSessions: (): Promise<SessionSummary[]> => invoke('db:listSessions'),
+    getPreference: (key: string): Promise<unknown> => invoke('db:getPreference', key),
+    savePreference: (key: string, value: unknown): Promise<boolean> => invoke('db:savePreference', key, value)
   },
 
   profile: {
