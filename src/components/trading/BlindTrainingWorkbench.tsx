@@ -34,7 +34,6 @@ import './BlindTrainingWorkbench.css'
 import '../../types/global.d'
 
 const INITIAL_CAPITAL = DEFAULT_TRADING_CONFIG.initialCapital
-const SAMPLE_POOL_BARS = 520
 
 interface SampleExtensionResult {
   loaded: boolean
@@ -83,8 +82,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [initialized, setInitialized] = useState(false)
   const [visibleCount, setVisibleCount] = useState(120)
   const [candidateCount, setCandidateCount] = useState(500)
+  const [samplePoolBars, setSamplePoolBars] = useState(520)
   const [, setPrefsLoaded] = useState(false)
   const prefsLoadedRef = useRef(false)
+  const samplePoolBarsRef = useRef(520)
 
   // 加载持久化的训练配置
   useEffect(() => {
@@ -95,6 +96,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         if (cancelled || !prefs) return
         if (typeof prefs.candidateCount === 'number' && [200, 500, 1000, 2000].includes(prefs.candidateCount)) {
           setCandidateCount(prefs.candidateCount)
+        }
+        if (typeof prefs.samplePoolBars === 'number' && [520, 1040, 1560].includes(prefs.samplePoolBars)) {
+          setSamplePoolBars(prefs.samplePoolBars)
+          samplePoolBarsRef.current = prefs.samplePoolBars
         }
         if (typeof prefs.minPrice === 'number' && prefs.minPrice >= 0) {
           setMinPrice(prefs.minPrice)
@@ -133,7 +138,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const requestRandomSamples = useCallback(async (
     targetRegime: string,
     targetPeriod: PeriodType,
-    barsPerSymbol: number = SAMPLE_POOL_BARS
+    barsPerSymbol: number = samplePoolBarsRef.current
   ) => {
     const raw = await window.electronAPI?.data?.getRandomSamples(targetRegime, targetPeriod, candidateCount, {
       maxBarsPerSymbol: barsPerSymbol,
@@ -178,7 +183,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   }, [period, regime, requestRandomSamples])
 
   useEffect(() => {
-    if (!initialized) {
+    if (!initialized && prefsLoadedRef.current) {
       void loadSamples()
       setInitialized(true)
     }
@@ -907,13 +912,16 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     setCandidateCount(DEFAULT_WORKBENCH_SETTINGS.candidateCount)
     setMinPrice(DEFAULT_WORKBENCH_SETTINGS.minPrice)
     setVisibleCount(DEFAULT_WORKBENCH_SETTINGS.visibleCount)
+    setSamplePoolBars(520)
+    samplePoolBarsRef.current = 520
     void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
       regime: DEFAULT_WORKBENCH_SETTINGS.regime,
       continuousMode: DEFAULT_WORKBENCH_SETTINGS.continuousMode,
       executionMode: DEFAULT_WORKBENCH_SETTINGS.executionMode,
       candidateCount: DEFAULT_WORKBENCH_SETTINGS.candidateCount,
       minPrice: DEFAULT_WORKBENCH_SETTINGS.minPrice,
-      visibleCount: DEFAULT_WORKBENCH_SETTINGS.visibleCount
+      visibleCount: DEFAULT_WORKBENCH_SETTINGS.visibleCount,
+      samplePoolBars: 520
     })
     if (sessionStatus === 'idle') {
       setInitialized(false)
@@ -1091,6 +1099,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
             actionPending={actionPending || extendingSample}
             candidateCount={candidateCount}
             minPrice={minPrice}
+            samplePoolBars={samplePoolBars}
             activeSampleLoadedBars={activeSample?.klines.length || 0}
             activeSampleTotalBars={activeSample?.totalAvailableBars}
             onToggleSettings={() => setShowSettings((value) => !value)}
@@ -1104,10 +1113,13 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               setExecutionMode(settings.executionMode)
               setCandidateCount(settings.candidateCount)
               setMinPrice(settings.minPrice)
+              setSamplePoolBars(settings.samplePoolBars)
+              samplePoolBarsRef.current = settings.samplePoolBars
               // 持久化训练配置（退出后下次进入仍生效）
               void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
                 candidateCount: settings.candidateCount,
                 minPrice: settings.minPrice,
+                samplePoolBars: settings.samplePoolBars,
                 period: settings.period,
                 regime: settings.regime,
                 continuousMode: settings.continuousMode,

@@ -466,7 +466,7 @@ export const registerDataIpc = () => {
     const excludeRecent = Number(options?.excludeRecent || 0)
     const profileId = options?.profileId || 'default'
     const requestedCandidates = Number(options?.candidateCount || 80)
-    const candidateLimit = Math.max(20, Math.min(1000, requestedCandidates))
+    const candidateLimit = Math.max(20, Math.min(2000, requestedCandidates))
     const minPrice = Number(options?.minPrice || 0)
 
     try {

@@ -1,12 +1,21 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { ExecutionMode, PeriodType, SessionStatus, TrainingSample } from '../blind/types'
-import { CANDIDATE_COUNT_OPTIONS, DEFAULT_WORKBENCH_SETTINGS, REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
+import { DEFAULT_WORKBENCH_SETTINGS, REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
 import { CheckIcon, GearIcon } from '../../common/Icons'
 
 const EXECUTION_MODE_OPTIONS: { value: ExecutionMode; label: string; tooltip: string }[] = [
   { value: 'close', label: '当天收盘价', tooltip: '以当前 K 线（t 时刻）的收盘价成交。适合模拟尾盘买入/卖出。' },
   { value: 'next_open', label: '次日开盘价', tooltip: '以下一根 K 线（t+1 时刻）的开盘价成交。更接近真实交易。' }
 ]
+
+const SAMPLE_POOL_OPTIONS = [
+  { value: 520, label: '标准' },
+  { value: 1040, label: '深度' },
+  { value: 1560, label: '超深' }
+]
+
+const CANDIDATE_DEFAULT = [200, 500]
+const CANDIDATE_ADVANCED = [1000, 2000]
 
 interface SessionToolbarProps {
   activeSample: TrainingSample | null
@@ -23,6 +32,7 @@ interface SessionToolbarProps {
   actionPending: boolean
   candidateCount: number
   minPrice: number
+  samplePoolBars: number
   activeSampleLoadedBars: number
   activeSampleTotalBars?: number
   onToggleSettings: () => void
@@ -36,6 +46,7 @@ interface SessionToolbarProps {
     executionMode: ExecutionMode
     candidateCount: number
     minPrice: number
+    samplePoolBars: number
   }) => void
   settingsFeedback?: string
 }
@@ -47,12 +58,14 @@ interface DraftSettings {
   executionMode: ExecutionMode
   candidateCount: number
   minPrice: number
+  samplePoolBars: number
 }
 
 interface SettingsPanelProps {
   initialSettings: DraftSettings
   sampleLoading: boolean
   actionPending: boolean
+  sessionStatus: SessionStatus
   onApplySettings: SessionToolbarProps['onApplySettings']
   onResetSettings: () => void
 }
@@ -63,18 +76,27 @@ const SettingsPanel = ({
   initialSettings,
   sampleLoading,
   actionPending,
+  sessionStatus,
   onApplySettings,
   onResetSettings
 }: SettingsPanelProps) => {
   const [draftSettings, setDraftSettings] = useState(() => createDraftSettings(initialSettings))
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const hasChanges =
-    draftSettings.period !== initialSettings.period ||
     draftSettings.regime !== initialSettings.regime ||
     draftSettings.continuousMode !== initialSettings.continuousMode ||
     draftSettings.executionMode !== initialSettings.executionMode ||
     draftSettings.candidateCount !== initialSettings.candidateCount ||
-    draftSettings.minPrice !== initialSettings.minPrice
+    draftSettings.minPrice !== initialSettings.minPrice ||
+    draftSettings.samplePoolBars !== initialSettings.samplePoolBars
+
+  // 判断改了哪些"破坏性"设置（会重置样本池）
+  const destructiveChanged =
+    draftSettings.regime !== initialSettings.regime ||
+    draftSettings.candidateCount !== initialSettings.candidateCount ||
+    draftSettings.minPrice !== initialSettings.minPrice ||
+    draftSettings.samplePoolBars !== initialSettings.samplePoolBars
 
   const handleApply = () => {
     onApplySettings(draftSettings)
@@ -86,6 +108,8 @@ const SettingsPanel = ({
 
   return (
     <div className="wt-settings-bar">
+      {/* 第一组：影响样本池的设置（破坏性） */}
+      <div className="wt-settings-group-label">样本筛选</div>
       <div className="wt-settings-row">
         <div className="wt-filter-group">
           <span className="wt-filter-label">走势筛选</span>
@@ -104,15 +128,76 @@ const SettingsPanel = ({
           </div>
         </div>
         <div className="wt-filter-group">
-          <label className="wt-continuous-check">
-            <input
-              type="checkbox"
-              checked={draftSettings.continuousMode}
-              onChange={(event) => setDraftSettings((current) => ({ ...current, continuousMode: event.target.checked }))}
-            />
-            <span>连续训练模式</span>
-          </label>
+          <span className="wt-filter-label">
+            样本深度
+            <span className="wt-tooltip-trigger" data-tooltip="每只股票最多取多少根 K 线参与训练。标准(520)约 2 年日线，深度(1040)约 4 年，超深(1560)约 6 年。">?</span>
+          </span>
+          <div className="wt-period-btns">
+            {SAMPLE_POOL_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                className={`wt-period-btn ${draftSettings.samplePoolBars === option.value ? 'active' : ''}`}
+                onClick={() => setDraftSettings((current) => ({ ...current, samplePoolBars: option.value }))}
+                disabled={sampleLoading}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
+        <div className="wt-filter-group">
+          <span className="wt-filter-label">
+            抽样范围
+            <span className="wt-tooltip-trigger" data-tooltip="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。">?</span>
+          </span>
+          <div className="wt-period-btns">
+            {CANDIDATE_DEFAULT.map((value) => (
+              <button
+                key={value}
+                className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
+                onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
+                disabled={sampleLoading}
+              >
+                {value === 200 ? '标准' : '广泛'}
+              </button>
+            ))}
+            {(showAdvanced || CANDIDATE_ADVANCED.includes(draftSettings.candidateCount)) &&
+              CANDIDATE_ADVANCED.map((value) => (
+                <button
+                  key={value}
+                  className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
+                  onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
+                  disabled={sampleLoading}
+                >
+                  {value}
+                </button>
+              ))
+            }
+          </div>
+        </div>
+        <div className="wt-filter-group">
+          <span className="wt-filter-label">最低股价</span>
+          <div className="wt-price-filter">
+            <input
+              className="wt-price-input"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="不限"
+              value={draftSettings.minPrice || ''}
+              onChange={(e) => setDraftSettings((current) => ({ ...current, minPrice: Number(e.target.value) || 0 }))}
+            />
+            <span className="wt-price-unit">元</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 分隔线 */}
+      <div className="wt-settings-divider" />
+
+      {/* 第二组：热生效设置 */}
+      <div className="wt-settings-group-label">交易设置 <span className="wt-settings-group-hint">（即时生效，无需重载）</span></div>
+      <div className="wt-settings-row">
         <div className="wt-filter-group">
           <span className="wt-filter-label">
             成交价
@@ -133,42 +218,33 @@ const SettingsPanel = ({
           </div>
         </div>
         <div className="wt-filter-group">
-          <span className="wt-filter-label">
-            抽样范围
-            <span className="wt-tooltip-trigger" data-tooltip="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。">?</span>
-          </span>
-          <div className="wt-period-btns">
-            {CANDIDATE_COUNT_OPTIONS.map((value) => (
-              <button
-                key={value}
-                className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
-                onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
-                disabled={sampleLoading}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="wt-filter-group">
-          <span className="wt-filter-label">最低股价</span>
-          <div className="wt-price-filter">
+          <label className="wt-continuous-check">
             <input
-              className="wt-price-input"
-              type="number"
-              min="0"
-              step="1"
-              placeholder="不限"
-              value={draftSettings.minPrice || ''}
-              onChange={(e) => setDraftSettings((current) => ({ ...current, minPrice: Number(e.target.value) || 0 }))}
+              type="checkbox"
+              checked={draftSettings.continuousMode}
+              onChange={(event) => setDraftSettings((current) => ({ ...current, continuousMode: event.target.checked }))}
             />
-            <span className="wt-price-unit">元</span>
-          </div>
-          <div className="wt-filter-subtext">
-            过滤低价股，只选最新收盘价 ≥ 该值的股票。0 表示不限。
-          </div>
+            <span>连续训练模式</span>
+          </label>
         </div>
       </div>
+
+      {/* 自动扩展提示 */}
+      <div className="wt-settings-hint-row">
+        样本不足时系统自动扩展，无需手动操作。
+      </div>
+
+      {/* 高级折叠 */}
+      {!showAdvanced && !CANDIDATE_ADVANCED.includes(draftSettings.candidateCount) && (
+        <button
+          className="wt-advanced-toggle"
+          onClick={() => setShowAdvanced(true)}
+        >
+          高级选项
+        </button>
+      )}
+
+      {/* 底部操作栏 */}
       <div className="wt-settings-footer">
         <button
           className="wt-btn wt-btn-secondary"
@@ -177,7 +253,13 @@ const SettingsPanel = ({
         >
           恢复默认
         </button>
-        {hasChanges && <span className="wt-settings-hint">有未应用的更改</span>}
+        {hasChanges && (
+          <span className="wt-settings-hint">
+            {sessionStatus === 'running' && destructiveChanged
+              ? '⚠ 将结束当前训练并重载样本'
+              : '有未应用的更改'}
+          </span>
+        )}
         <button
           className="wt-btn wt-btn-primary"
           onClick={handleApply}
@@ -210,6 +292,7 @@ const SessionToolbar = ({
   actionPending,
   candidateCount,
   minPrice,
+  samplePoolBars,
   activeSampleLoadedBars,
   activeSampleTotalBars,
   onToggleSettings,
@@ -225,8 +308,9 @@ const SessionToolbar = ({
     continuousMode,
     executionMode,
     candidateCount,
-    minPrice
-  }), [period, regime, continuousMode, executionMode, candidateCount, minPrice])
+    minPrice,
+    samplePoolBars
+  }), [period, regime, continuousMode, executionMode, candidateCount, minPrice, samplePoolBars])
 
   const settingsKey = useMemo(
     () => JSON.stringify(initialSettings),
@@ -295,6 +379,7 @@ const SessionToolbar = ({
           initialSettings={initialSettings}
           sampleLoading={sampleLoading}
           actionPending={actionPending}
+          sessionStatus={sessionStatus}
           onApplySettings={onApplySettings}
           onResetSettings={onResetSettings}
         />

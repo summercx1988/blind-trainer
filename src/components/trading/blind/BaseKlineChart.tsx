@@ -295,17 +295,22 @@ const BaseKlineChart = ({
     }
   }, [benchmarkMarkers, data, markers, selectedMarkerIndex, exitWindow])
 
+  // 数据加载：仅在 data/ticker 变化时执行
   useEffect(() => {
     const chart = chartRef.current
     if (!chart || data.length === 0) return
 
-    // 强制刷新：先清空数据再注册新 loader（klinecharts v10 不会主动重新拉取）
-    chart.resetData()
     chart.setDataLoader({
       getBars: handleGetBars
     })
     chart.setSymbol({ ticker, pricePrecision: 2, volumePrecision: 0 })
     chart.setPeriod({ type: 'day', span: 1 })
+  }, [data, handleGetBars, ticker])
+
+  // 滚动定位：visibleCount/scrollToDate 变化时仅滚动，不重新加载数据
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart || data.length === 0) return
 
     if (scrollToDate && data.length > 0) {
       const targetTs = new Date(`${scrollToDate}T12:00:00+08:00`).getTime()
@@ -313,16 +318,16 @@ const BaseKlineChart = ({
       if (idx >= 0) {
         setTimeout(() => {
           chart.scrollToDataIndex(Math.max(0, idx - 10))
-        }, 200)
+        }, 100)
       }
     } else if (visibleCount && visibleCount > 0) {
       setTimeout(() => {
         const lastIdx = data.length - 1
         const scrollTo = Math.max(0, lastIdx - Math.min(visibleCount, data.length) + 5)
         chart.scrollToDataIndex(scrollTo)
-      }, 200)
+      }, 100)
     }
-  }, [data, handleGetBars, ticker, visibleCount, scrollToDate])
+  }, [data, visibleCount, scrollToDate])
 
   useEffect(() => {
     const chart = chartRef.current
