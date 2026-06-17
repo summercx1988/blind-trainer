@@ -83,7 +83,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [visibleCount, setVisibleCount] = useState(120)
   const [candidateCount, setCandidateCount] = useState(500)
   const [samplePoolBars, setSamplePoolBars] = useState(520)
-  const [, setPrefsLoaded] = useState(false)
+  const [prefsLoaded, setPrefsLoaded] = useState(false)
   const prefsLoadedRef = useRef(false)
   const samplePoolBarsRef = useRef(520)
 
@@ -162,6 +162,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     }
     try {
       const normalized = await requestRandomSamples(regime, period)
+      console.log('[loadSamples] returned', normalized.length, 'samples for regime=', regime, 'period=', period)
 
       if (normalized.length > 0) {
         setSamples(normalized)
@@ -183,17 +184,17 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   }, [period, regime, requestRandomSamples])
 
   useEffect(() => {
-    if (!initialized && prefsLoadedRef.current) {
+    if (!initialized && prefsLoaded) {
       void loadSamples()
       setInitialized(true)
     }
-  }, [initialized, loadSamples])
+  }, [initialized, loadSamples, prefsLoaded])
 
   // 持久化热生效设置（visibleCount 等）
   useEffect(() => {
-    if (!prefsLoadedRef.current) return
+    if (!prefsLoaded) return
     void window.electronAPI?.db?.savePreference('workbench_settings_v1', { visibleCount })
-  }, [visibleCount])
+  }, [visibleCount, prefsLoaded])
 
   useEffect(() => {
     void fetchActiveProfile()

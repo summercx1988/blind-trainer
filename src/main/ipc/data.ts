@@ -519,6 +519,8 @@ export const registerDataIpc = () => {
         klines: NormalizedBar[]
       }> = []
 
+      log.info(`[getRandomSamples] target=${regime} period=${period} candidateLimit=${candidateLimit} maxBarsPerSymbol=${maxBarsPerSymbol} minPrice=${minPrice} codesTried=${codes.length}`)
+
       for (const { code } of codes) {
         const stockInfo = database.prepare('SELECT name FROM stock_list WHERE code = ? LIMIT 1').get(code) as { name?: string } | undefined
         const stockName = stockInfo?.name || code
@@ -535,7 +537,10 @@ export const registerDataIpc = () => {
               ORDER BY trade_date DESC, trade_time DESC LIMIT ?
             `).all(code, maxBarsPerSymbol) as KlineMinuteRow[])
 
-        if (rows.length < minTotalBars) continue
+        if (rows.length < minTotalBars) {
+          if (samples.length === 0) log.warn(`[getRandomSamples] code=${code} skipped: rows=${rows.length} < minTotalBars=${minTotalBars}`)
+          continue
+        }
 
         const ascendingRows = [...rows].reverse()
         const bars: NormalizedBar[] = ascendingRows.map((row) => {
@@ -623,8 +628,10 @@ export const registerDataIpc = () => {
         if (samples.length >= count) break
       }
 
+      log.info(`[getRandomSamples] result: codesTried=${codes.length} samples=${samples.length} minPrice=${minPrice}`)
       return samples
-    } catch {
+    } catch (error) {
+      log.error('[getRandomSamples] failed:', error)
       return []
     }
   })
