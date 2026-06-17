@@ -225,6 +225,8 @@ const BaseKlineChart = ({
   const chartRef = useRef<Nullable<Chart>>(null)
   const markerTimestampsRef = useRef<Array<{ barIndex: number; timestamp: number }>>([])
   const onMarkerClickRef = useRef(onMarkerClick)
+  // 用 ref 保存滚动参数，避免加入 handleGetBars 依赖导致数据重载
+  const scrollRef = useRef<{ visibleCount?: number; scrollToDate?: string }>({})
 
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick
@@ -276,6 +278,11 @@ const BaseKlineChart = ({
     }
   }, [onMarkerClick])
 
+  // 同步滚动参数到 ref
+  useEffect(() => {
+    scrollRef.current = { visibleCount, scrollToDate }
+  }, [visibleCount, scrollToDate])
+
   const handleGetBars = useCallback((params: DataLoaderGetBarsParams) => {
     if (!data || data.length === 0) {
       params.callback([], false)
@@ -289,17 +296,37 @@ const BaseKlineChart = ({
 
     params.callback(klineData, false)
 
+    // 数据加载完成后立即滚动（resetData 后必须在 getBars 回调中滚动，否则图表停在默认位置）
+    const { visibleCount: vc, scrollToDate: sd } = scrollRef.current
+    setTimeout(() => {
+      const chart = chartRef.current
+      if (!chart) return
+      if (sd && data.length > 0) {
+        const targetTs = new Date(`${sd}T12:00:00+08:00`).getTime()
+        const idx = data.findIndex((bar) => Math.abs(toMs(bar.timestamp) - targetTs) < 86400000)
+        if (idx >= 0) chart.scrollToDataIndex(Math.max(0, idx - 10))
+      } else if (vc && vc > 0) {
+        const lastIdx = klineData.length - 1
+        chart.scrollToDataIndex(Math.max(0, lastIdx - Math.min(vc, klineData.length) + 5))
+      }
+    }, 50)
+
     const chart = chartRef.current
     if (chart && (markers.length > 0 || (benchmarkMarkers && benchmarkMarkers.length > 0))) {
       setTimeout(() => createOverlays(chart, data, markers, benchmarkMarkers, selectedMarkerIndex, exitWindow), 50)
     }
   }, [benchmarkMarkers, data, markers, selectedMarkerIndex, exitWindow])
 
-  // 数据加载：仅在 data/ticker 变化时执行
+  // ⚠ klinecharts v10 API 陷阱（勿删此注释）：
+  // 1. setDataLoader() 只注册回调，不会主动触发 getBars
+  // 2. 必须先 resetData() 清空旧数据，chart 才会重新调用 getBars 拉取新数据
+  // 3. resetData 后 getBars 是异步回调，滚动必须在 getBars 回调内执行
+  //    否则 scrollToDataIndex 会在空图表上执行，导致 K线"不跳转"
   useEffect(() => {
     const chart = chartRef.current
     if (!chart || data.length === 0) return
 
+    chart.resetData()
     chart.setDataLoader({
       getBars: handleGetBars
     })
@@ -307,7 +334,8 @@ const BaseKlineChart = ({
     chart.setPeriod({ type: 'day', span: 1 })
   }, [data, handleGetBars, ticker])
 
-  // 滚动定位：visibleCount/scrollToDate 变化时仅滚动，不重新加载数据
+  // visibleCount/scrollToDate 变化时仅滚动（不重载数据）
+  // 数据加载后的首次滚动由 handleGetBars 回调处理
   useEffect(() => {
     const chart = chartRef.current
     if (!chart || data.length === 0) return
@@ -316,18 +344,13 @@ const BaseKlineChart = ({
       const targetTs = new Date(`${scrollToDate}T12:00:00+08:00`).getTime()
       const idx = data.findIndex((bar) => Math.abs(toMs(bar.timestamp) - targetTs) < 86400000)
       if (idx >= 0) {
-        setTimeout(() => {
-          chart.scrollToDataIndex(Math.max(0, idx - 10))
-        }, 100)
+        chart.scrollToDataIndex(Math.max(0, idx - 10))
       }
     } else if (visibleCount && visibleCount > 0) {
-      setTimeout(() => {
-        const lastIdx = data.length - 1
-        const scrollTo = Math.max(0, lastIdx - Math.min(visibleCount, data.length) + 5)
-        chart.scrollToDataIndex(scrollTo)
-      }, 100)
+      const lastIdx = data.length - 1
+      chart.scrollToDataIndex(Math.max(0, lastIdx - Math.min(visibleCount, data.length) + 5))
     }
-  }, [data, visibleCount, scrollToDate])
+  }, [visibleCount, scrollToDate])
 
   useEffect(() => {
     const chart = chartRef.current
