@@ -386,6 +386,39 @@ export const registerBlindIpc = () => {
 
   ipcMain.handle('db:saveTradeAction', async (_, action) => saveTradeActionToDb(action))
 
+  ipcMain.handle('db:saveLabel', async (_, payload: {
+    sessionId: string
+    barIndex: number
+    labelType: 'buy' | 'sell' | 'hold' | 'no_action'
+    source: string
+    status?: 'proposed' | 'accepted' | 'rejected' | 'modified'
+    confidence?: number
+  }) => {
+    try {
+      const db = getBlindDb()
+      const id = `label_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const now = Math.floor(Date.now() / 1000)
+      db.prepare(`
+        INSERT INTO labels (id, session_id, bar_index, label_type, source, status, confidence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id,
+        payload.sessionId,
+        payload.barIndex,
+        payload.labelType,
+        payload.source,
+        payload.status || 'proposed',
+        payload.confidence ?? 0.5,
+        now,
+        now
+      )
+      return { id, success: true }
+    } catch (error) {
+      log.error('[blind] saveLabel ERROR:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   ipcMain.handle('db:getSessionActions', async (_, sessionId) => getSessionActionsFromDb(sessionId))
 
   ipcMain.handle('db:getPreference', async (_, key: string) => {
