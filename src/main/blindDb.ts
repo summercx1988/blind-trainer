@@ -130,6 +130,34 @@ const initBlindTables = (database: Database.Database) => {
     CREATE INDEX IF NOT EXISTS idx_blind_labels_session ON labels(session_id);
     CREATE INDEX IF NOT EXISTS idx_blind_labels_bar ON labels(bar_index);
     CREATE INDEX IF NOT EXISTS idx_blind_profiles_active ON training_profiles(is_active);
+
+    CREATE TABLE IF NOT EXISTS habits_profile (
+      id TEXT PRIMARY KEY,
+      profile_id TEXT NOT NULL,
+      computed_at INTEGER NOT NULL,
+      session_count INTEGER NOT NULL,
+      indicators_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (profile_id) REFERENCES training_profiles(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_habits_profile_pid_time ON habits_profile(profile_id, computed_at DESC);
+
+    CREATE TABLE IF NOT EXISTS ai_reports (
+      id TEXT PRIMARY KEY,
+      profile_id TEXT NOT NULL,
+      habit_profile_id TEXT NOT NULL,
+      report_json TEXT NOT NULL,
+      raw_response TEXT,
+      model TEXT,
+      prompt_tokens INTEGER,
+      completion_tokens INTEGER,
+      duration_ms INTEGER,
+      error TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      FOREIGN KEY (profile_id) REFERENCES training_profiles(id) ON DELETE CASCADE,
+      FOREIGN KEY (habit_profile_id) REFERENCES habits_profile(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_reports_pid_time ON ai_reports(profile_id, created_at DESC);
   `)
 }
 
