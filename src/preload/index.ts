@@ -99,6 +99,23 @@ const electronAPI = {
     setMarketDbConfig: (dbPath: string): Promise<UnknownRecord> => invoke('data:setMarketDbConfig', dbPath)
   },
 
+  agent: {
+    getConfig: (): Promise<{ endpoint: string; model: string; ready: boolean; apiKeyMasked: string }> =>
+      invoke('agent:getConfig'),
+    saveConfig: (config: { endpoint?: string; apiKey?: string; model?: string }): Promise<{ success: boolean; error?: string }> =>
+      invoke('agent:saveConfig', config),
+    testConnection: (): Promise<{ ok: boolean; latencyMs: number; error: string | null }> =>
+      invoke('agent:testConnection'),
+    analyzeHabits: (profileId: string): Promise<unknown> =>
+      invoke('agent:analyzeHabits', { profileId }),
+    generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }): Promise<unknown> =>
+      invoke('agent:generateReport', req),
+    listReports: (profileId: string, limit?: number): Promise<unknown[]> =>
+      invoke('agent:listReports', { profileId, limit }),
+    getHabitHistory: (profileId: string, limit?: number): Promise<unknown[]> =>
+      invoke('agent:getHabitHistory', { profileId, limit }),
+  },
+
   onTrainingLog: (callback: (event: unknown, data: { stream: string; text: string }) => void) => {
     ipcRenderer.on('training:log', callback)
   },

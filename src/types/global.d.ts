@@ -84,6 +84,16 @@ declare global {
         setMarketDbConfig: (dbPath: string) => Promise<UnknownRecord>
       }
 
+      agent?: {
+        getConfig: () => Promise<{ endpoint: string; model: string; ready: boolean; apiKeyMasked: string }>
+        saveConfig: (config: { endpoint?: string; apiKey?: string; model?: string }) => Promise<{ success: boolean; error?: string }>
+        testConnection: () => Promise<{ ok: boolean; latencyMs: number; error: string | null }>
+        analyzeHabits: (profileId: string) => Promise<unknown>
+        generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }) => Promise<unknown>
+        listReports: (profileId: string, limit?: number) => Promise<unknown[]>
+        getHabitHistory: (profileId: string, limit?: number) => Promise<unknown[]>
+      }
+
       onTrainingLog?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void
       removeTrainingLogListener?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void
 
