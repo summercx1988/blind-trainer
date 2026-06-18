@@ -36,6 +36,8 @@
 | `--color-warning` | — | `#d97706` | 警告色 |
 | `--color-warning-bg` | — | `#fffbeb` | 警告浅底 |
 
+> 涨跌色统一为 A 股惯例（涨红跌绿）。K 线蜡烛色、买卖标记、REGIME 趋势色、训练趋势图散点均对齐 `--color-up`/`--color-down`。完整口径见 [trading-accounting-spec.md §5](./trading-accounting-spec.md)。
+
 ### 2.2 圆角（收紧）
 
 | 元素 | 当前 | 新值 | 原则 |

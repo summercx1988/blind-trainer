@@ -64,20 +64,20 @@ const CHART_STYLES = {
       low: { show: true, color: '#7b8cab', textSize: 10 },
       last: {
         show: true,
-        upColor: '#e74c3c',
-        downColor: '#27ae60',
+        upColor: '#dc2626',
+        downColor: '#16a34a',
         noChangeColor: '#95a5a6',
         line: { show: true, style: 'dashed' as const, dashedValue: [4, 4], size: 1 }
       }
     },
     bar: {
-      upColor: '#e74c3c', downColor: '#27ae60',
-      upBorderColor: '#e74c3c', downBorderColor: '#27ae60',
-      upWickColor: '#e74c3c', downWickColor: '#27ae60'
+      upColor: '#dc2626', downColor: '#16a34a',
+      upBorderColor: '#dc2626', downBorderColor: '#16a34a',
+      upWickColor: '#dc2626', downWickColor: '#16a34a'
     },
     tooltip: { showRule: 'follow_cross' as const, showType: 'standard' as const }
   },
-  indicator: { ohlc: { upColor: 'rgba(231, 76, 60, 0.65)', downColor: 'rgba(39, 174, 96, 0.65)' } },
+  indicator: { ohlc: { upColor: 'rgba(220, 38, 38, 0.65)', downColor: 'rgba(22, 163, 74, 0.65)' } },
   xAxis: { show: true, tickText: { color: '#7b8cab', size: 11 } },
   yAxis: { show: true, tickText: { color: '#7b8cab', size: 11 } },
   crosshair: {
@@ -169,10 +169,10 @@ function createOverlays(
   const normalSellPoints = normalSell.map((m) => toOverlayPoint(m, bars)).filter((p): p is { timestamp: number; value: number } => p !== null)
 
   if (normalBuyPoints.length > 0) {
-    createPointOverlays('trade-markers', 'buy_marker', normalBuyPoints, 'diamond', '#e74c3c', 7, 'B')
+    createPointOverlays('trade-markers', 'buy_marker', normalBuyPoints, 'diamond', '#dc2626', 7, 'B')
   }
   if (normalSellPoints.length > 0) {
-    createPointOverlays('trade-markers', 'sell_marker', normalSellPoints, 'diamond', '#27ae60', 7, 'S')
+    createPointOverlays('trade-markers', 'sell_marker', normalSellPoints, 'diamond', '#16a34a', 7, 'S')
   }
 
   if (selectedMarkerIndex !== undefined && selectedMarkerIndex >= 0 && selectedMarkerIndex < markers.length) {

@@ -1,14 +1,14 @@
 export const REGIME_OPTIONS: { value: string; label: string; color: string }[] = [
   { value: 'mixed', label: '全部', color: '#6f7f9b' },
-  { value: 'uptrend', label: '上升趋势', color: '#e74c3c' },
-  { value: 'downtrend', label: '下降趋势', color: '#27ae60' },
+  { value: 'uptrend', label: '上升趋势', color: '#dc2626' },
+  { value: 'downtrend', label: '下降趋势', color: '#16a34a' },
   { value: 'sideways', label: '盘整', color: '#3498db' },
   { value: 'volatile', label: '高波动', color: '#f39c12' }
 ]
 
 export const REGIME_COLOR_MAP: Record<string, string> = {
-  uptrend: '#e74c3c',
-  downtrend: '#27ae60',
+  uptrend: '#dc2626',
+  downtrend: '#16a34a',
   sideways: '#3498db',
   volatile: '#f39c12',
   mixed: '#6f7f9b',

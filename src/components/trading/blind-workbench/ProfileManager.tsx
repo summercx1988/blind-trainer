@@ -577,8 +577,8 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
                   strokeDasharray="4,2"
                 />
                 <text x={trendData.padding.left - 10} y={trendData.zeroY} textAnchor="end" dominantBaseline="middle" fill="#999" fontSize={10}>0%</text>
-                <text x={trendData.padding.left - 10} y={trendData.padding.top} textAnchor="end" dominantBaseline="middle" fill="#27ae60" fontSize={10}>{trendData.maxPnl.toFixed(1)}%</text>
-                <text x={trendData.padding.left - 10} y={trendData.height - trendData.padding.bottom} textAnchor="end" dominantBaseline="middle" fill="#e74c3c" fontSize={10}>{trendData.minPnl.toFixed(1)}%</text>
+                <text x={trendData.padding.left - 10} y={trendData.padding.top} textAnchor="end" dominantBaseline="middle" fill="#dc2626" fontSize={10}>{trendData.maxPnl.toFixed(1)}%</text>
+                <text x={trendData.padding.left - 10} y={trendData.height - trendData.padding.bottom} textAnchor="end" dominantBaseline="middle" fill="#16a34a" fontSize={10}>{trendData.minPnl.toFixed(1)}%</text>
                 <polyline
                   fill="none"
                   stroke="#3498db"
@@ -594,7 +594,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
                       cx={x}
                       cy={y}
                       r={3}
-                      fill={d.pnlPct >= 0 ? '#27ae60' : '#e74c3c'}
+                      fill={d.pnlPct >= 0 ? '#dc2626' : '#16a34a'}
                     />
                   )
                 })}
@@ -646,8 +646,8 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
                     stroke="#d9dee7"
                     strokeDasharray="4,2"
                   />
-                  <text x={dailyReturnTrendData.padding.left - 6} y={dailyReturnTrendData.padding.top} textAnchor="end" dominantBaseline="middle" fill="#27ae60" fontSize={10}>{dailyReturnTrendData.maxReturn.toFixed(2)}%</text>
-                  <text x={dailyReturnTrendData.padding.left - 6} y={dailyReturnTrendData.height - dailyReturnTrendData.padding.bottom} textAnchor="end" dominantBaseline="middle" fill="#e74c3c" fontSize={10}>{dailyReturnTrendData.minReturn.toFixed(2)}%</text>
+                  <text x={dailyReturnTrendData.padding.left - 6} y={dailyReturnTrendData.padding.top} textAnchor="end" dominantBaseline="middle" fill="#dc2626" fontSize={10}>{dailyReturnTrendData.maxReturn.toFixed(2)}%</text>
+                  <text x={dailyReturnTrendData.padding.left - 6} y={dailyReturnTrendData.height - dailyReturnTrendData.padding.bottom} textAnchor="end" dominantBaseline="middle" fill="#16a34a" fontSize={10}>{dailyReturnTrendData.minReturn.toFixed(2)}%</text>
                   <polyline
                     fill="none"
                     stroke="#16a085"
