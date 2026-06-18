@@ -45,14 +45,12 @@ export default function AIHabitAdvisor() {
     if (active?.id) setProfileId(active.id)
     const cfg = await window.electronAPI?.agent?.getConfig()
     setConfigReady(Boolean(cfg?.ready))
-    const hist = await window.electronAPI?.agent?.getHabitHistory(active?.id ?? 'default', 10)
-    const histArr = (hist ?? []) as HabitProfileRecord[]
-    setHistory(histArr)
-    if (histArr.length > 0) {
-      setHabit(histArr[0])
-      const reports = await window.electronAPI?.agent?.listReports(active?.id ?? 'default', 1)
-      const repArr = (reports ?? []) as ReportRecord[]
-      if (repArr.length > 0 && !repArr[0].error) setReport(repArr[0])
+    const hist = unwrap<HabitProfileRecord[]>(await window.electronAPI?.agent?.getHabitHistory(active?.id ?? 'default', 10)) ?? []
+    setHistory(hist)
+    if (hist.length > 0) {
+      setHabit(hist[0])
+      const reports = unwrap<ReportRecord[]>(await window.electronAPI?.agent?.listReports(active?.id ?? 'default', 1)) ?? []
+      if (reports.length > 0 && !reports[0].error) setReport(reports[0])
     }
   }, [])
 
@@ -66,8 +64,8 @@ export default function AIHabitAdvisor() {
       const data = unwrap<HabitProfileRecord>(r)
       if (data) {
         setHabit(data)
-        const hist = await window.electronAPI?.agent?.getHabitHistory(profileId, 10)
-        setHistory((hist ?? []) as HabitProfileRecord[])
+        const hist = unwrap<HabitProfileRecord[]>(await window.electronAPI?.agent?.getHabitHistory(profileId, 10)) ?? []
+        setHistory(hist)
       } else {
         setError((r as { error?: { message?: string } })?.error?.message ?? '分析失败')
       }
@@ -123,10 +121,18 @@ export default function AIHabitAdvisor() {
           {loadingHabit ? '分析中...' : habit ? '重新分析' : '生成诊断'}
         </button>
         <button
+          onClick={() => handleGenerateReport(false)}
+          disabled={loadingReport || !habit || !configReady}
+          title={report ? '优先读缓存；若无缓存则重新生成' : '生成 AI 报告'}
+        >
+          {loadingReport ? '生成报告中...' : report ? '刷新报告' : '生成 AI 报告'}
+        </button>
+        <button
           onClick={() => handleGenerateReport(true)}
           disabled={loadingReport || !habit || !configReady}
+          title="强制重新调用 LLM（不计缓存）"
         >
-          {loadingReport ? '生成报告中...' : '生成 AI 报告'}
+          强制重生
         </button>
         <button onClick={() => setShowSettings(s => !s)}>
           {showSettings ? '收起配置' : 'AI 配置'}

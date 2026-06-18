@@ -182,19 +182,29 @@ export function registerAgentIpc() {
   })
 
   ipcMain.handle('agent:listReports', async (_, payload: { profileId: string; limit?: number }) => {
-    const db = getBlindDb()
-    const limit = payload.limit ?? 20
-    return db.prepare(`
-      SELECT * FROM ai_reports WHERE profile_id = ? ORDER BY created_at DESC LIMIT ?
-    `).all(payload.profileId, limit)
+    try {
+      const db = getBlindDb()
+      const limit = payload.limit ?? 20
+      return ok(db.prepare(`
+        SELECT * FROM ai_reports WHERE profile_id = ? ORDER BY created_at DESC LIMIT ?
+      `).all(payload.profileId, limit))
+    } catch (error) {
+      log.error('[agent] listReports ERROR:', error)
+      return fail('list_reports_failed', String(error))
+    }
   })
 
   ipcMain.handle('agent:getHabitHistory', async (_, payload: { profileId: string; limit?: number }) => {
-    const db = getBlindDb()
-    const limit = payload.limit ?? 20
-    const rows = db.prepare(`
-      SELECT * FROM habits_profile WHERE profile_id = ? ORDER BY computed_at DESC LIMIT ?
-    `).all(payload.profileId, limit) as Array<Omit<HabitProfile, 'indicators'> & { indicators_json: string }>
-    return rows.map(r => ({ ...r, indicators: JSON.parse(r.indicators_json) }))
+    try {
+      const db = getBlindDb()
+      const limit = payload.limit ?? 20
+      const rows = db.prepare(`
+        SELECT * FROM habits_profile WHERE profile_id = ? ORDER BY computed_at DESC LIMIT ?
+      `).all(payload.profileId, limit) as Array<Omit<HabitProfile, 'indicators'> & { indicators_json: string }>
+      return ok(rows.map(r => ({ ...r, indicators: JSON.parse(r.indicators_json) })))
+    } catch (error) {
+      log.error('[agent] getHabitHistory ERROR:', error)
+      return fail('get_habit_history_failed', String(error))
+    }
   })
 }

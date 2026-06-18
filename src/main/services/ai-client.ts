@@ -15,7 +15,8 @@ const TIMEOUT_MS = 30_000
 export async function callLlm(
   config: AiAdvisorConfig,
   messages: Array<{ role: 'system' | 'user'; content: string }>,
-  timeoutMs = TIMEOUT_MS
+  timeoutMs = TIMEOUT_MS,
+  maxTokens = 2048
 ): Promise<LlmCallResult> {
   if (!config.ready) {
     return { ok: false, content: '', status: null, promptTokens: null, completionTokens: null, durationMs: 0, error: 'not_configured' }
@@ -33,7 +34,7 @@ export async function callLlm(
       },
       body: JSON.stringify({
         model: config.model,
-        max_tokens: 2048,
+        max_tokens: maxTokens,
         messages,
       }),
       signal: controller.signal,
@@ -75,6 +76,6 @@ export async function callLlm(
 }
 
 export async function testConnection(config: AiAdvisorConfig): Promise<{ ok: boolean; latencyMs: number; error: string | null }> {
-  const result = await callLlm(config, [{ role: 'user', content: 'ping' }], 10_000)
+  const result = await callLlm(config, [{ role: 'user', content: 'ping' }], 10_000, 1)
   return { ok: result.ok, latencyMs: result.durationMs, error: result.error }
 }

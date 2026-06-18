@@ -110,9 +110,9 @@ const electronAPI = {
       invoke('agent:analyzeHabits', { profileId }),
     generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }): Promise<unknown> =>
       invoke('agent:generateReport', req),
-    listReports: (profileId: string, limit?: number): Promise<unknown[]> =>
+    listReports: (profileId: string, limit?: number): Promise<unknown> =>
       invoke('agent:listReports', { profileId, limit }),
-    getHabitHistory: (profileId: string, limit?: number): Promise<unknown[]> =>
+    getHabitHistory: (profileId: string, limit?: number): Promise<unknown> =>
       invoke('agent:getHabitHistory', { profileId, limit }),
   },
 

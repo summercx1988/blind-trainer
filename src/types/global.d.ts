@@ -90,8 +90,8 @@ declare global {
         testConnection: () => Promise<{ ok: boolean; latencyMs: number; error: string | null }>
         analyzeHabits: (profileId: string) => Promise<unknown>
         generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }) => Promise<unknown>
-        listReports: (profileId: string, limit?: number) => Promise<unknown[]>
-        getHabitHistory: (profileId: string, limit?: number) => Promise<unknown[]>
+        listReports: (profileId: string, limit?: number) => Promise<unknown>
+        getHabitHistory: (profileId: string, limit?: number) => Promise<unknown>
       }
 
       onTrainingLog?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void
