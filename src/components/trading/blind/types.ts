@@ -76,4 +76,5 @@ export interface TradingState {
   shares: number
   avgPrice: number
   realizedPnl: number
+  fixedBuyShares: number
 }

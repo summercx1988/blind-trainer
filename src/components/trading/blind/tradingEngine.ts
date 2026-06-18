@@ -43,12 +43,16 @@ export interface SessionSettlement {
   autoCloseTrade: ExecutedTrade | null
 }
 
-export const createInitialTradingState = (initialCapital = DEFAULT_TRADING_CONFIG.initialCapital): TradingState => {
+export const createInitialTradingState = (
+  initialCapital = DEFAULT_TRADING_CONFIG.initialCapital,
+  fixedBuyShares = 0
+): TradingState => {
   return {
     cash: initialCapital,
     shares: 0,
     avgPrice: 0,
-    realizedPnl: 0
+    realizedPnl: 0,
+    fixedBuyShares
   }
 }
 
@@ -79,12 +83,12 @@ export const evaluateManualAction = (
   }
 
   if (actionType === 'buy') {
-    if (state.shares > 0) {
-      return { ok: false, error: '当前已有持仓，请先卖出后再买入。' }
-    }
-
-    const budget = state.cash * config.buyBudgetRatio
-    const buyShares = Math.floor(budget / (price * config.lotSize)) * config.lotSize
+    const buyShares = state.fixedBuyShares > 0
+      ? state.fixedBuyShares
+      : (() => {
+          const budget = state.cash * config.buyBudgetRatio
+          return Math.floor(budget / (price * config.lotSize)) * config.lotSize
+        })()
     if (buyShares <= 0) {
       return { ok: false, error: `可用资金不足，无法按 ${config.lotSize} 股单位买入。` }
     }
@@ -92,14 +96,19 @@ export const evaluateManualAction = (
     const amount = buyShares * price
     const commission = calcCommission(amount, config)
     if (state.cash < amount + commission) {
-      return { ok: false, error: '可用资金不足，无法完成买入。' }
+      return { ok: false, error: '剩余资金不足以下一手。' }
     }
 
+    const newShares = state.shares + buyShares
+    const newAvgPrice = newShares > 0
+      ? (state.shares * state.avgPrice + amount + commission) / newShares
+      : 0
     const nextState: TradingState = {
       cash: state.cash - amount - commission,
-      shares: state.shares + buyShares,
-      avgPrice: amount / buyShares,
-      realizedPnl: state.realizedPnl
+      shares: newShares,
+      avgPrice: newAvgPrice,
+      realizedPnl: state.realizedPnl,
+      fixedBuyShares: state.fixedBuyShares
     }
 
     return {
@@ -129,7 +138,8 @@ export const evaluateManualAction = (
       cash: state.cash + amount - commission,
       shares: 0,
       avgPrice: 0,
-      realizedPnl: state.realizedPnl + realizedPnl
+      realizedPnl: state.realizedPnl + realizedPnl,
+      fixedBuyShares: state.fixedBuyShares
     }
 
     return {
@@ -193,7 +203,8 @@ export const settleAtSessionEnd = (
       cash: state.cash + amount - commission,
       shares: 0,
       avgPrice: 0,
-      realizedPnl: state.realizedPnl + realizedPnl
+      realizedPnl: state.realizedPnl + realizedPnl,
+      fixedBuyShares: state.fixedBuyShares
     },
     autoCloseTrade: {
       actionType: 'sell',
