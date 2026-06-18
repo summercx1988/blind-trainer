@@ -3,6 +3,7 @@ import log from '../logger'
 import { getBlindDb } from '../blindDb'
 import { getDb } from '../db'
 import { calculateSessionReviewMetrics } from '../sessionReview'
+import { registerAgentIpc } from './agentIpc'
 import type {
   SaveSessionInput,
   SaveTradeActionInput,
@@ -741,4 +742,6 @@ export const registerBlindIpc = () => {
       skipQuality: 'good'
     }
   })
+
+  registerAgentIpc()
 }

@@ -1,0 +1,200 @@
+import { ipcMain } from 'electron'
+import log from '../logger'
+import { getDb } from '../db'
+import { getBlindDb } from '../blindDb'
+import { ok, fail } from './platformResult'
+import { computeHabitIndicators } from '../services/habit-analyzer'
+import { buildMessages, parseReportResponse, selectRepresentativeSessions } from '../services/ai-advisor'
+import { callLlm, testConnection } from '../services/ai-client'
+import { DEFAULT_HABIT_CONFIG } from '../../types/agent'
+import type {
+  AiAdvisorConfig,
+  HabitProfile,
+  HabitIndicators,
+  TradeActionRow,
+  SessionReviewRow,
+  SessionRow,
+} from '../../types/agent'
+
+const CONFIG_KEY = 'ai_advisor_config'
+const MIN_SESSIONS = 3
+
+const readConfig = (): AiAdvisorConfig => {
+  const row = getDb()
+    .prepare('SELECT value_json FROM app_preferences WHERE key = ? LIMIT 1')
+    .get(CONFIG_KEY) as { value_json?: string } | undefined
+  let parsed: Partial<AiAdvisorConfig> = {}
+  if (row?.value_json) {
+    try { parsed = JSON.parse(row.value_json) } catch { /* ignore */ }
+  }
+  const endpoint = parsed.endpoint
+    || (process.env.ANTHROPIC_BASE_URL ? `${process.env.ANTHROPIC_BASE_URL}/v1/messages` : 'https://open.bigmodel.cn/api/anthropic/v1/messages')
+  const apiKey = parsed.apiKey || process.env.ANTHROPIC_AUTH_TOKEN || ''
+  const model = parsed.model || process.env.ANTHROPIC_MODEL || 'glm-4.7'
+  return { endpoint, apiKey, model, ready: Boolean(apiKey) }
+}
+
+interface ProfileData {
+  sessions: SessionRow[]
+  actions: TradeActionRow[]
+  reviews: SessionReviewRow[]
+}
+
+const loadProfileData = (profileId: string): ProfileData => {
+  const db = getBlindDb()
+  const sessions = db.prepare(`
+    SELECT id, stock_code, stock_name, interval_type, initial_capital, realized_pnl, status, started_at
+    FROM training_sessions
+    WHERE profile_id = ? AND status = 'finished'
+    ORDER BY started_at ASC
+  `).all(profileId) as SessionRow[]
+  const sessionIds = sessions.map(s => s.id)
+  if (sessionIds.length === 0) {
+    return { sessions: [], actions: [], reviews: [] }
+  }
+  const placeholders = sessionIds.map(() => '?').join(',')
+  const actions = db.prepare(`
+    SELECT session_id, bar_index, action_type, price, shares, amount, realized_pnl, created_at
+    FROM trade_actions
+    WHERE session_id IN (${placeholders})
+    ORDER BY created_at ASC
+  `).all(...sessionIds) as TradeActionRow[]
+  const reviews = db.prepare(`
+    SELECT session_id, trade_win_rate, realized_pnl, realized_pnl_pct, max_drawdown_pct,
+           buy_count, sell_count, hold_count, avg_holding_bars, total_trades, winning_trades
+    FROM session_reviews
+    WHERE session_id IN (${placeholders})
+  `).all(...sessionIds) as SessionReviewRow[]
+  return { sessions, actions, reviews }
+}
+
+export function registerAgentIpc() {
+  ipcMain.handle('agent:getConfig', async () => {
+    const c = readConfig()
+    const maskedKey = c.apiKey ? `****${c.apiKey.slice(-4)}` : ''
+    return { endpoint: c.endpoint, model: c.model, ready: c.ready, apiKeyMasked: maskedKey }
+  })
+
+  ipcMain.handle('agent:saveConfig', async (_, payload: { endpoint?: string; apiKey?: string; model?: string }) => {
+    try {
+      const now = Math.floor(Date.now() / 1000)
+      const current = readConfig()
+      const next = {
+        endpoint: payload.endpoint || current.endpoint,
+        apiKey: payload.apiKey || current.apiKey,
+        model: payload.model || current.model,
+      }
+      getDb().prepare(`
+        INSERT INTO app_preferences (key, value_json, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
+      `).run(CONFIG_KEY, JSON.stringify(next), now)
+      return { success: true }
+    } catch (error) {
+      log.error('[agent] saveConfig ERROR:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('agent:testConnection', async () => {
+    const result = await testConnection(readConfig())
+    return result
+  })
+
+  ipcMain.handle('agent:analyzeHabits', async (_, payload: { profileId: string }) => {
+    try {
+      const { sessions, actions, reviews } = loadProfileData(payload.profileId)
+      if (sessions.length < MIN_SESSIONS) {
+        return fail('insufficient_data', `至少需要 ${MIN_SESSIONS} 场已结束训练，当前 ${sessions.length} 场`)
+      }
+      const indicators: HabitIndicators = computeHabitIndicators(actions, reviews, sessions, DEFAULT_HABIT_CONFIG)
+      const db = getBlindDb()
+      const id = `habit_${Date.now()}`
+      const now = Math.floor(Date.now() / 1000)
+      db.prepare(`
+        INSERT INTO habits_profile (id, profile_id, computed_at, session_count, indicators_json)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(id, payload.profileId, now, sessions.length, JSON.stringify(indicators))
+      const profile: HabitProfile = { id, profile_id: payload.profileId, computed_at: now, session_count: sessions.length, indicators }
+      return ok(profile)
+    } catch (error) {
+      log.error('[agent] analyzeHabits ERROR:', error)
+      return fail('analyze_failed', String(error))
+    }
+  })
+
+  ipcMain.handle('agent:generateReport', async (_, payload: { profileId: string; habitProfileId?: string; force?: boolean }) => {
+    try {
+      const db = getBlindDb()
+      let habitProfile: HabitProfile | null = null
+      if (payload.habitProfileId) {
+        const row = db.prepare('SELECT * FROM habits_profile WHERE id = ? LIMIT 1').get(payload.habitProfileId) as (Omit<HabitProfile, 'indicators'> & { indicators_json: string }) | undefined
+        if (row) habitProfile = { id: row.id, profile_id: row.profile_id, computed_at: row.computed_at, session_count: row.session_count, indicators: JSON.parse(row.indicators_json) }
+      } else {
+        const row = db.prepare('SELECT * FROM habits_profile WHERE profile_id = ? ORDER BY computed_at DESC LIMIT 1').get(payload.profileId) as (Omit<HabitProfile, 'indicators'> & { indicators_json: string }) | undefined
+        if (row) habitProfile = { id: row.id, profile_id: row.profile_id, computed_at: row.computed_at, session_count: row.session_count, indicators: JSON.parse(row.indicators_json) }
+      }
+      if (!habitProfile) {
+        return fail('no_habit_profile', '请先生成习惯诊断')
+      }
+
+      if (!payload.force) {
+        const cached = db.prepare(`
+          SELECT * FROM ai_reports WHERE habit_profile_id = ? ORDER BY created_at DESC LIMIT 1
+        `).get(habitProfile.id) as Record<string, unknown> | undefined
+        if (cached && !cached.error) {
+          return ok(cached)
+        }
+      }
+
+      const config = readConfig()
+      if (!config.ready) return fail('not_configured', '请先在设置中配置 AI 助手')
+      const { sessions, actions, reviews } = loadProfileData(payload.profileId)
+      const repSessions = selectRepresentativeSessions(
+        sessions.map(s => ({ id: s.id, stock_code: s.stock_code, stock_name: s.stock_name, interval_type: s.interval_type, realized_pnl: s.realized_pnl, status: s.status })),
+        actions,
+        reviews.map(r => ({ session_id: r.session_id, realized_pnl_pct: r.realized_pnl_pct, total_trades: r.total_trades, trade_win_rate: r.trade_win_rate }))
+      )
+      const messages = buildMessages(habitProfile, repSessions)
+      const llmResult = await callLlm(config, messages)
+
+      const parsed = parseReportResponse(llmResult.content)
+      const reportId = `report_${Date.now()}`
+      const errorStr = !llmResult.ok ? llmResult.error : parsed.error
+      db.prepare(`
+        INSERT INTO ai_reports (id, profile_id, habit_profile_id, report_json, raw_response, model, prompt_tokens, completion_tokens, duration_ms, error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        reportId, payload.profileId, habitProfile.id,
+        JSON.stringify(parsed.report),
+        llmResult.content || null,
+        config.model,
+        llmResult.promptTokens, llmResult.completionTokens, llmResult.durationMs,
+        errorStr
+      )
+      const record = db.prepare('SELECT * FROM ai_reports WHERE id = ?').get(reportId)
+      if (!llmResult.ok) return fail(llmResult.error || 'llm_failed', `LLM 调用失败：${llmResult.error}`)
+      return ok(record)
+    } catch (error) {
+      log.error('[agent] generateReport ERROR:', error)
+      return fail('generate_failed', String(error))
+    }
+  })
+
+  ipcMain.handle('agent:listReports', async (_, payload: { profileId: string; limit?: number }) => {
+    const db = getBlindDb()
+    const limit = payload.limit ?? 20
+    return db.prepare(`
+      SELECT * FROM ai_reports WHERE profile_id = ? ORDER BY created_at DESC LIMIT ?
+    `).all(payload.profileId, limit)
+  })
+
+  ipcMain.handle('agent:getHabitHistory', async (_, payload: { profileId: string; limit?: number }) => {
+    const db = getBlindDb()
+    const limit = payload.limit ?? 20
+    const rows = db.prepare(`
+      SELECT * FROM habits_profile WHERE profile_id = ? ORDER BY computed_at DESC LIMIT ?
+    `).all(payload.profileId, limit) as Array<Omit<HabitProfile, 'indicators'> & { indicators_json: string }>
+    return rows.map(r => ({ ...r, indicators: JSON.parse(r.indicators_json) }))
+  })
+}
