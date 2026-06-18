@@ -13,13 +13,20 @@
 会话开始时（首次进入或换样本时），按以下公式一次性计算本会话的固定买入股数，写入 `TradingState.fixedBuyShares`：
 
 ```
-fixedBuyShares = floor(初始资金 × 仓位比例档位 ÷ 首根成交价 ÷ lotSize) × lotSize
+budget = 初始资金 × 仓位比例档位
+effectivePrice = price × (1 + commissionRate)
+affordable = (budget - minCommission) / effectivePrice
+fixedBuyShares = floor(affordable / lotSize) × lotSize
 ```
 
 - `初始资金`：当前 profile 的 `current_capital`（默认 100,000）。
 - `仓位比例档位`：见 §1.2。
-- `lotSize`：100 股（A 股最小交易单位）。
+- `effectivePrice`：把按比例的 commissionRate 折算进单价，确保成交额+手续费 ≤ 预算。
+- `minCommission`：单笔最低手续费（默认 5 元），预算需先扣除。
+- `lotSize`：100 股（A 股最小交易单位），向下取整。
 - 之后每次点 B 都买 `fixedBuyShares` 股，直到剩余现金不足以下一手。
+
+**保证可加仓到满仓**：因为 fixedBuyShares 已预留手续费空间，两次（或多次）连续买入时每次花费（含费）都不会超过档位预算，剩余现金始终够下一次。
 
 ### 1.2 仓位档位
 

@@ -210,8 +210,12 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const computeFixedBuyShares = useCallback((capital: number, price: number): number => {
     if (!Number.isFinite(price) || price <= 0 || capital <= 0) return 0
     const ratio = positionRatioRef.current
-    const raw = (capital * ratio) / price
-    return Math.floor(raw / DEFAULT_TRADING_CONFIG.lotSize) * DEFAULT_TRADING_CONFIG.lotSize
+    const budget = capital * ratio
+    const effectivePrice = price * (1 + DEFAULT_TRADING_CONFIG.commissionRate)
+    const affordable = budget > DEFAULT_TRADING_CONFIG.minCommission
+      ? (budget - DEFAULT_TRADING_CONFIG.minCommission) / effectivePrice
+      : 0
+    return Math.floor(affordable / DEFAULT_TRADING_CONFIG.lotSize) * DEFAULT_TRADING_CONFIG.lotSize
   }, [])
 
   const currentBar = useMemo(() => {
