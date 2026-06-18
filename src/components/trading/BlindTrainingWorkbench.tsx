@@ -1162,6 +1162,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 accountEquity={accountEquity}
                 totalPnlPct={totalPnlPct}
                 unrealizedPnl={unrealizedPnl}
+                initialCapital={sessionInitialCapital}
                 currentBar={currentBar}
                 visibleBars={visibleBars}
                 tradeMarkers={visibleTradeMarkers}

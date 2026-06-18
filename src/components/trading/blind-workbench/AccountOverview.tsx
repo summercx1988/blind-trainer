@@ -15,6 +15,7 @@ interface AccountOverviewProps {
   accountEquity: number
   totalPnlPct: number
   unrealizedPnl: number
+  initialCapital: number
   currentBar: KlineBar
   visibleBars: KlineBar[]
   tradeMarkers: TradeMarker[]
@@ -28,6 +29,7 @@ const AccountOverview = ({
   accountEquity,
   totalPnlPct,
   unrealizedPnl,
+  initialCapital,
   currentBar,
   visibleBars,
   tradeMarkers,
@@ -40,6 +42,15 @@ const AccountOverview = ({
     ? ((currentBar.close - prevBar.close) / prevBar.close) * 100
     : null
 
+  const markPrice = currentBar?.close || 0
+  const cashPct = initialCapital > 0 ? (account.cash / initialCapital) * 100 : 0
+  const positionValue = account.shares * markPrice
+  const totalAssets = account.cash + positionValue
+  const positionPct = totalAssets > 0 ? (positionValue / totalAssets) * 100 : 0
+  const costBasis = account.avgPrice * account.shares
+  const unrealizedPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : null
+  const realizedPct = initialCapital > 0 ? (account.realizedPnl / initialCapital) * 100 : null
+
   return (
     <>
       <div className="wt-account-row">
@@ -51,19 +62,30 @@ const AccountOverview = ({
         <div className="wt-acct-card">
           <div className="wt-acct-title">可用资金</div>
           <div className="wt-acct-value">{toMoney(account.cash)}</div>
+          <div className="wt-acct-sub">剩余 {cashPct.toFixed(1)}%</div>
         </div>
         <div className="wt-acct-card">
           <div className="wt-acct-title">持仓</div>
           <div className="wt-acct-value">{account.shares}</div>
-          <div className="wt-acct-sub">成本 {account.shares > 0 ? toMoney(account.avgPrice) : '-'}</div>
+          <div className="wt-acct-sub">
+            {account.shares > 0
+              ? `成本 ${toMoney(account.avgPrice)} · 仓位 ${positionPct.toFixed(1)}%`
+              : '-'}
+          </div>
         </div>
         <div className="wt-acct-card">
           <div className="wt-acct-title">浮动盈亏</div>
           <div className={`wt-acct-value ${unrealizedPnl >= 0 ? 'up' : 'down'}`}>{toSignedMoney(unrealizedPnl)}</div>
+          <div className={`wt-acct-sub ${unrealizedPnl >= 0 ? 'up' : 'down'}`}>
+            {unrealizedPct !== null ? toSignedPct(unrealizedPct) : '-'}
+          </div>
         </div>
         <div className="wt-acct-card">
           <div className="wt-acct-title">已实现盈亏</div>
           <div className={`wt-acct-value ${account.realizedPnl >= 0 ? 'up' : 'down'}`}>{toSignedMoney(account.realizedPnl)}</div>
+          <div className={`wt-acct-sub ${account.realizedPnl >= 0 ? 'up' : 'down'}`}>
+            {realizedPct !== null ? toSignedPct(realizedPct) : '-'}
+          </div>
         </div>
       </div>
 

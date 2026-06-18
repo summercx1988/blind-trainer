@@ -920,6 +920,9 @@
   font-family: var(--font-mono);
 }
 
+.wt-acct-sub.up { color: var(--color-up); }
+.wt-acct-sub.down { color: var(--color-down); }
+
 .wt-acct-main .wt-acct-sub {
   color: var(--dark-text-secondary);
 }
@@ -1335,7 +1338,7 @@
 .wt-log-header,
 .wt-log-row {
   display: grid;
-  grid-template-columns: 60px 80px 90px 70px 110px 100px;
+  grid-template-columns: 60px 80px 90px 70px 110px 100px 80px;
   gap: 8px;
   padding: 8px 10px;
   align-items: center;
@@ -1778,7 +1781,7 @@
 
   .wt-log-header,
   .wt-log-row {
-    grid-template-columns: 50px 70px 80px 60px 90px 80px;
+    grid-template-columns: 50px 70px 80px 60px 90px 80px 70px;
     gap: 4px;
     font-size: 0.78rem;
   }
