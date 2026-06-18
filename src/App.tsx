@@ -5,8 +5,9 @@ import './App.css'
 const BlindTrainingWorkbench = lazy(() => import('./components/trading/BlindTrainingWorkbench'))
 const TrainingOverview = lazy(() => import('./components/trading/TrainingOverview'))
 const DataManagement = lazy(() => import('./components/trading/DataManagement'))
+const AIHabitAdvisor = lazy(() => import('./components/trading/AIHabitAdvisor'))
 
-type AppModule = 'overview' | 'blind' | 'data'
+type AppModule = 'overview' | 'blind' | 'data' | 'agent'
 
 interface ModuleDefinition {
   id: AppModule
@@ -51,6 +52,14 @@ const MODULE_GROUPS = [
         outcome: '在不看未来的前提下，稳定完成买卖决策并沉淀会话复盘。',
         focus: ['真实样本', '动作执行', '会话结束复盘']
       },
+      {
+        id: 'agent' as AppModule,
+        label: 'AI 交易教练',
+        category: '习惯诊断',
+        summary: '解析训练记录，识别交易优缺点与不良习惯，给出改善计划。',
+        outcome: '把统计指标变成可执行的实战改进清单。',
+        focus: ['习惯指标', 'AI 诊断', '改善计划']
+      },
     ]
   },
 ]
@@ -88,6 +97,13 @@ const renderModule = (
           autoStart={autoStartBlind}
           registerNavigationGuard={registerBlindNavigationGuard}
         />
+      </Suspense>
+    )
+  }
+  if (activeModule === 'agent') {
+    return (
+      <Suspense fallback={<WorkspaceFallback label="AI 交易教练" />}>
+        <AIHabitAdvisor />
       </Suspense>
     )
   }
