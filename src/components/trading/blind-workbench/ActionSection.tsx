@@ -20,7 +20,7 @@ const ActionSection = ({
   return (
     <div className="wt-action-section">
       <div className="wt-action-btns">
-        <button className="wt-btn wt-btn-buy" onClick={() => onActionClick('buy')} disabled={actionPending || accountShares > 0} aria-label="买入（快捷键B）">
+        <button className="wt-btn wt-btn-buy" onClick={() => onActionClick('buy')} disabled={actionPending} aria-label="买入（快捷键B）">
           买入 <kbd>B</kbd>
         </button>
         <button className="wt-btn wt-btn-sell" onClick={() => onActionClick('sell')} disabled={actionPending || accountShares <= 0} aria-label="卖出（快捷键S）">

@@ -24,6 +24,7 @@ import {
 } from './blind/tradingEngine'
 import ContinuousBar from './blind-workbench/ContinuousBar'
 import SessionToolbar, { DEFAULT_WORKBENCH_SETTINGS } from './blind-workbench/SessionToolbar'
+import { DEFAULT_POSITION_RATIO } from './blind-workbench/constants'
 import AccountOverview from './blind-workbench/AccountOverview'
 import ActionSection from './blind-workbench/ActionSection'
 import ActionLog from './blind-workbench/ActionLog'
@@ -83,9 +84,11 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [visibleCount, setVisibleCount] = useState(120)
   const [candidateCount, setCandidateCount] = useState(500)
   const [samplePoolBars, setSamplePoolBars] = useState(520)
+  const [positionRatio, setPositionRatio] = useState(DEFAULT_POSITION_RATIO)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const prefsLoadedRef = useRef(false)
   const samplePoolBarsRef = useRef(520)
+  const positionRatioRef = useRef(DEFAULT_POSITION_RATIO)
 
   // 加载持久化的训练配置
   useEffect(() => {
@@ -103,6 +106,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         }
         if (typeof prefs.minPrice === 'number' && prefs.minPrice >= 0) {
           setMinPrice(prefs.minPrice)
+        }
+        if (typeof prefs.positionRatio === 'number' && prefs.positionRatio > 0 && prefs.positionRatio <= 1) {
+          setPositionRatio(prefs.positionRatio)
+          positionRatioRef.current = prefs.positionRatio
         }
         if (typeof prefs.visibleCount === 'number' && prefs.visibleCount >= 20 && prefs.visibleCount <= 200) {
           setVisibleCount(prefs.visibleCount)
@@ -199,6 +206,13 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   useEffect(() => {
     void fetchActiveProfile()
   }, [fetchActiveProfile])
+
+  const computeFixedBuyShares = useCallback((capital: number, price: number): number => {
+    if (!Number.isFinite(price) || price <= 0 || capital <= 0) return 0
+    const ratio = positionRatioRef.current
+    const raw = (capital * ratio) / price
+    return Math.floor(raw / DEFAULT_TRADING_CONFIG.lotSize) * DEFAULT_TRADING_CONFIG.lotSize
+  }, [])
 
   const currentBar = useMemo(() => {
     if (!activeSample) return null
@@ -602,7 +616,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       setNotice(`⚠ 保存会话异常: ${String(err)}`)
     }
 
-    const nextAccount = createInitialTradingState(capital)
+    const nextAccount = createInitialTradingState(capital, computeFixedBuyShares(capital, sample.klines[safeWarmup]?.close || 0))
     sessionIdRef.current = resolvedSessionId
     activeSampleRef.current = sample
     sessionStatusRef.current = 'running'
@@ -623,7 +637,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     setActionError('')
     setNotice('')
     finishingRef.current = false
-  }, [])
+  }, [computeFixedBuyShares])
 
   const startRandomSession = useCallback(async () => {
     if (samples.length === 0) {
@@ -846,7 +860,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           profileId: curProfile?.id
         })
         const resolvedSessionId = (saved as SaveSessionResult | undefined)?.id || `session_local_${Date.now()}`
-        const nextAccount = createInitialTradingState(nextCapital)
+        const nextAccount = createInitialTradingState(nextCapital, computeFixedBuyShares(nextCapital, sample.klines[safeWarmup]?.close || 0))
         sessionIdRef.current = resolvedSessionId
         activeSampleRef.current = sample
         sessionStatusRef.current = 'running'
@@ -876,7 +890,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     } finally {
       setActionPending(false)
     }
-  }, [regime, period, requestRandomSamples, persistTradeAction, currentBarIndex, refreshProfileCaches, getCurrentSessionFinalCapital])
+  }, [regime, period, requestRandomSamples, persistTradeAction, currentBarIndex, refreshProfileCaches, getCurrentSessionFinalCapital, computeFixedBuyShares])
 
   const handleContinueTraining = useCallback(async () => {
     const carryCapital = getCurrentSessionFinalCapital() ?? undefined
@@ -1101,6 +1115,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
             candidateCount={candidateCount}
             minPrice={minPrice}
             samplePoolBars={samplePoolBars}
+            positionRatio={positionRatio}
             activeSampleLoadedBars={activeSample?.klines.length || 0}
             activeSampleTotalBars={activeSample?.totalAvailableBars}
             onToggleSettings={() => setShowSettings((value) => !value)}
@@ -1116,6 +1131,8 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               setMinPrice(settings.minPrice)
               setSamplePoolBars(settings.samplePoolBars)
               samplePoolBarsRef.current = settings.samplePoolBars
+              setPositionRatio(settings.positionRatio)
+              positionRatioRef.current = settings.positionRatio
               // 持久化训练配置（退出后下次进入仍生效）
               void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
                 candidateCount: settings.candidateCount,
@@ -1124,7 +1141,8 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 period: settings.period,
                 regime: settings.regime,
                 continuousMode: settings.continuousMode,
-                executionMode: settings.executionMode
+                executionMode: settings.executionMode,
+                positionRatio: settings.positionRatio
               })
               if (sessionStatus === 'idle') {
                 setInitialized(false)

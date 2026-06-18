@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { ExecutionMode, PeriodType, SessionStatus, TrainingSample } from '../blind/types'
-import { DEFAULT_WORKBENCH_SETTINGS, REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
+import { DEFAULT_WORKBENCH_SETTINGS, POSITION_RATIO_OPTIONS, REGIME_COLOR_MAP, REGIME_OPTIONS } from './constants'
 import { CheckIcon, GearIcon } from '../../common/Icons'
 
 const EXECUTION_MODE_OPTIONS: { value: ExecutionMode; label: string; tooltip: string }[] = [
@@ -33,6 +33,7 @@ interface SessionToolbarProps {
   candidateCount: number
   minPrice: number
   samplePoolBars: number
+  positionRatio: number
   activeSampleLoadedBars: number
   activeSampleTotalBars?: number
   onToggleSettings: () => void
@@ -47,6 +48,7 @@ interface SessionToolbarProps {
     candidateCount: number
     minPrice: number
     samplePoolBars: number
+    positionRatio: number
   }) => void
   settingsFeedback?: string
 }
@@ -59,6 +61,7 @@ interface DraftSettings {
   candidateCount: number
   minPrice: number
   samplePoolBars: number
+  positionRatio: number
 }
 
 interface SettingsPanelProps {
@@ -89,7 +92,8 @@ const SettingsPanel = ({
     draftSettings.executionMode !== initialSettings.executionMode ||
     draftSettings.candidateCount !== initialSettings.candidateCount ||
     draftSettings.minPrice !== initialSettings.minPrice ||
-    draftSettings.samplePoolBars !== initialSettings.samplePoolBars
+    draftSettings.samplePoolBars !== initialSettings.samplePoolBars ||
+    draftSettings.positionRatio !== initialSettings.positionRatio
 
   // 判断改了哪些"破坏性"设置（会重置样本池）
   const destructiveChanged =
@@ -218,6 +222,24 @@ const SettingsPanel = ({
           </div>
         </div>
         <div className="wt-filter-group">
+          <span className="wt-filter-label">
+            仓位档位
+            <span className="wt-tooltip-trigger" data-tooltip="每次 B 买入的资金占比。会话开始时按【初始资金 × 比例 ÷ 首根成交价】算出固定股数，之后每次 B 都买这个股数，可多次加仓到满仓。下次新训练生效。">?</span>
+          </span>
+          <div className="wt-period-btns">
+            {POSITION_RATIO_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                className={`wt-period-btn ${draftSettings.positionRatio === option.value ? 'active' : ''}`}
+                onClick={() => setDraftSettings((current) => ({ ...current, positionRatio: option.value }))}
+                disabled={actionPending}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="wt-filter-group">
           <label className="wt-continuous-check">
             <input
               type="checkbox"
@@ -293,6 +315,7 @@ const SessionToolbar = ({
   candidateCount,
   minPrice,
   samplePoolBars,
+  positionRatio,
   activeSampleLoadedBars,
   activeSampleTotalBars,
   onToggleSettings,
@@ -309,8 +332,9 @@ const SessionToolbar = ({
     executionMode,
     candidateCount,
     minPrice,
-    samplePoolBars
-  }), [period, regime, continuousMode, executionMode, candidateCount, minPrice, samplePoolBars])
+    samplePoolBars,
+    positionRatio
+  }), [period, regime, continuousMode, executionMode, candidateCount, minPrice, samplePoolBars, positionRatio])
 
   const settingsKey = useMemo(
     () => JSON.stringify(initialSettings),
