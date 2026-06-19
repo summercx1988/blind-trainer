@@ -192,3 +192,56 @@ describe('webApi 端到端集成（训练→结算→复盘）', () => {
     expect(typeof candles[0].close).toBe('number')
   })
 })
+
+describe('webApi data 同步/补录/重建（Web 版不支持）', () => {
+  it('data.getAutoSyncStatus 返回 disabled 状态', async () => {
+    const status = await api.data.getAutoSyncStatus() as {
+      lastSyncAt: string | null
+      nextSyncAt: string
+      syncing: boolean
+      syncType: string
+      syncError: string | null
+    }
+    expect(status.syncing).toBe(false)
+    expect(status.syncType).toBe('disabled')
+    expect(status.lastSyncAt).toBeNull()
+    expect(status.syncError).toBeNull()
+  })
+
+  it('data.sync 返回 success:false + 预置数据提示', async () => {
+    const result = await api.data.sync(10, ['1d']) as { success: boolean; error: { message: string } | null; code: string | null }
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_SUPPORTED')
+    expect(result.error?.message).toMatch(/预置|不支持|Web/)
+  })
+
+  it('data.triggerIncrementalSync 返回 success:false', async () => {
+    const result = await api.data.triggerIncrementalSync() as { success: boolean; error: { message: string } | null; code: string | null }
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_SUPPORTED')
+  })
+
+  it('data.rebuildStats 返回 success:false + 中文 error', async () => {
+    const result = await api.data.rebuildStats() as { success: boolean; error: { message: string } | null; code: string | null }
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_SUPPORTED')
+    expect(result.error?.message).toBeTruthy()
+  })
+
+  it('data.inspectMissingCoverage 返回 success:false', async () => {
+    const result = await api.data.inspectMissingCoverage() as { success: boolean; code: string | null }
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_SUPPORTED')
+  })
+
+  it('data.executeBackfillPlan 返回 success:false + 中文 error', async () => {
+    const result = await api.data.executeBackfillPlan({
+      dailyCodes: [],
+      m15Codes: [],
+      m5Codes: [],
+    }) as { success: boolean; error: { message: string } | null; code: string | null }
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_SUPPORTED')
+    expect(result.error?.message).toBeTruthy()
+  })
+})

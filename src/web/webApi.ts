@@ -29,6 +29,16 @@ export interface WebApiInitOptions {
   locateFile?: (file: string) => string
 }
 
+function notSupportedResult<T>(empty: T): PlatformResult<T> {
+  return {
+    success: false,
+    data: null,
+    error: { message: 'Web 版已预置数据，无需同步/补录' },
+    code: 'NOT_SUPPORTED',
+    meta: { empty } as never,
+  }
+}
+
 const prefsStore = new Map<string, unknown>()
 
 export function createWebApi(initOptions: WebApiInitOptions = {}) {
@@ -209,7 +219,55 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
       },
       getStats: async () => ({ stockCount: 0, dailyCount: 0, m15Count: 0, m5Count: 0 }),
       init: async () => ({ success: true, data: { stockList: null, dailySynced: 0, dailyFailed: 0 }, error: null, code: null }),
-      sync: async () => ({ success: true, data: null, error: null, code: null }),
+
+      getAutoSyncStatus: async () => ({
+        lastSyncAt: null,
+        nextSyncAt: '',
+        syncing: false,
+        syncType: 'disabled',
+        syncError: null,
+      }),
+
+      sync: async (_count?: number, _periods?: string[]) => notSupportedResult<unknown>({
+        syncedFromApi: 0,
+        syncedFromCache: 0,
+        syncedEmpty: 0,
+        totalResults: 0,
+        autoSignalScan: null,
+        coverage: null,
+        syncAdvice: [],
+      }),
+      triggerIncrementalSync: async () => notSupportedResult<{ started: false }>({ started: false }),
+      rebuildStats: async () => notSupportedResult<{
+        stockCount: number
+        dailyCount: number
+        m15Count: number
+        m5Count: number
+        statsRows?: number
+      }>({ stockCount: 0, dailyCount: 0, m15Count: 0, m5Count: 0 }),
+      inspectMissingCoverage: async () => notSupportedResult<{
+        scannedAt: string
+        stockCount: number
+        latestTradingDate: string | null
+        latestMinuteCutoff: string | null
+        intervals: { '1d': unknown; '15m': unknown; '5m': unknown }
+      }>({
+        scannedAt: '',
+        stockCount: 0,
+        latestTradingDate: null,
+        latestMinuteCutoff: null,
+        intervals: { '1d': null, '15m': null, '5m': null },
+      }),
+      executeBackfillPlan: async (_plan: { dailyCodes: string[]; m15Codes: string[]; m5Codes: string[] }) => notSupportedResult<{
+        execution: { daily: unknown; m15: unknown; m5: unknown }
+        stats: { stockCount: number; dailyCount: number; m15Count: number; m5Count: number }
+        coverage: unknown
+      }>({
+        execution: { daily: null, m15: null, m5: null },
+        stats: { stockCount: 0, dailyCount: 0, m15Count: 0, m5Count: 0 },
+        coverage: null,
+      }),
+
       checkSufficiency: async (_codes: string[]) => ({ results: {}, needsBackfill: [], sufficientCount: 0 }),
     },
 
