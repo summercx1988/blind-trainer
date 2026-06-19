@@ -1,5 +1,6 @@
-import { Suspense, lazy, useCallback, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import InfoHover from './components/common/InfoHover'
+import { initDb, queryStockList, queryKline, isDbReady } from './web/dbLoader'
 import './App.css'
 
 const BlindTrainingWorkbench = lazy(() => import('./components/trading/BlindTrainingWorkbench'))
@@ -114,6 +115,43 @@ const renderModule = (
   )
 }
 
+function DataProbe() {
+  const [status, setStatus] = useState('未初始化')
+  const [stocks, setStocks] = useState<Array<Record<string, unknown>>>([])
+  const [klines, setKlines] = useState<Array<Record<string, unknown>>>([])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        setStatus('加载中…')
+        await initDb()
+        setStatus('已加载，查询中…')
+        const s = await queryStockList(5)
+        setStocks(s)
+        if (s.length > 0) {
+          const k = await queryKline(s[0].code as string, 'daily', 5)
+          setKlines(k)
+        }
+        setStatus(`✅ 就绪（${s.length} 只股票示例）`)
+      } catch (e) {
+        setStatus(`❌ ${e instanceof Error ? e.message : String(e)}`)
+      }
+    })()
+  }, [])
+
+  return (
+    <div style={{ padding: 16, background: '#0d0d0d', color: '#fff', fontFamily: 'monospace', minHeight: '100vh' }}>
+      <h2 style={{ fontSize: 16 }}>数据探针 · PWA 阶段2a 验证</h2>
+      <p style={{ fontSize: 13 }}>DB 状态：{status}</p>
+      <p style={{ fontSize: 13 }}>isDbReady: {String(isDbReady())}</p>
+      <h3 style={{ fontSize: 14, marginTop: 16 }}>股票列表（前5）</h3>
+      <pre style={{ fontSize: 11, overflowX: 'auto' }}>{JSON.stringify(stocks, null, 2)}</pre>
+      <h3 style={{ fontSize: 14, marginTop: 16 }}>第一只股票最近5根K线</h3>
+      <pre style={{ fontSize: 11, overflowX: 'auto' }}>{JSON.stringify(klines, null, 2)}</pre>
+    </div>
+  )
+}
+
 function App() {
   const [activeModule, setActiveModule] = useState<AppModule>('overview')
   const [autoStartBlind, setAutoStartBlind] = useState(false)
@@ -157,6 +195,10 @@ function App() {
     [activeModule, handleNavigate, handleStartTraining, autoStartBlind]
   )
   /* eslint-enable react-hooks/refs */
+
+  if (typeof window !== 'undefined' && !(window as unknown as { electronAPI?: unknown }).electronAPI) {
+    return <DataProbe />
+  }
 
   return (
     <div className="app-shell">
