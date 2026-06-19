@@ -92,3 +92,45 @@ describe('evaluateManualAction - 固定买入金额语义', () => {
     expect(finalBuy.ok).toBe(true)
   })
 })
+
+describe('evaluateManualAction - overrideBuyAmount 快捷份额', () => {
+  it('传 overrideBuyAmount 时优先于 state.fixedBuyAmount', () => {
+    const state = createInitialTradingState(100_000, 50_000)
+    const result = evaluateManualAction(state, 'buy', 10, CONFIG, 25_000) as { ok: true; trade: { amount: number; commission: number; shares: number } }
+    expect(result.ok).toBe(true)
+    expect(result.trade.amount + result.trade.commission).toBeLessThanOrEqual(25_000 + 0.01)
+    expect(result.trade.shares).toBe(2400)
+  })
+
+  it('overrideBuyAmount=全仓(用 cash) 时剩余 < 总资金 2%', () => {
+    const state = createInitialTradingState(100_000, 0)
+    const result = evaluateManualAction(state, 'buy', 10, CONFIG, 100_000) as { ok: true; nextState: { cash: number }; trade: { shares: number } }
+    expect(result.ok).toBe(true)
+    expect(result.nextState.cash).toBeLessThan(2_000)
+    expect(result.trade.shares).toBeGreaterThan(0)
+  })
+
+  it('overrideBuyAmount 不影响 sell 路径', () => {
+    let state = createInitialTradingState(100_000, 0)
+    const buy = evaluateManualAction(state, 'buy', 10, CONFIG, 50_000) as { ok: true; nextState: typeof state }
+    state = buy.nextState
+    const sell = evaluateManualAction(state, 'sell', 12, CONFIG, 999_999) as { ok: true; nextState: { shares: number } }
+    expect(sell.ok).toBe(true)
+    expect(sell.nextState.shares).toBe(0)
+  })
+
+  it('overrideBuyAmount=0 时退化为默认 budget 行为', () => {
+    const state = createInitialTradingState(100_000, 50_000)
+    const withZero = evaluateManualAction(state, 'buy', 10, CONFIG, 0) as { ok: true; trade: { shares: number } }
+    const withoutOverride = evaluateManualAction(state, 'buy', 10, CONFIG) as { ok: true; trade: { shares: number } }
+    expect(withZero.trade.shares).toBe(withoutOverride.trade.shares)
+  })
+
+  it('overrideBuyAmount 超过 cash 时买完即停，不应报错', () => {
+    const state = createInitialTradingState(100_000, 0)
+    const result = evaluateManualAction(state, 'buy', 10, CONFIG, 999_999) as { ok: true; nextState: { cash: number }; trade: { shares: number } }
+    expect(result.ok).toBe(true)
+    expect(result.nextState.cash).toBeGreaterThanOrEqual(0)
+    expect(result.trade.shares).toBeGreaterThan(0)
+  })
+})

@@ -88,16 +88,20 @@ export const evaluateManualAction = (
   state: TradingState,
   actionType: ManualActionType,
   price: number,
-  config: TradingEngineConfig = DEFAULT_TRADING_CONFIG
+  config: TradingEngineConfig = DEFAULT_TRADING_CONFIG,
+  overrideBuyAmount?: number
 ): ManualActionExecution => {
   if (!Number.isFinite(price) || price <= 0) {
     return { ok: false, error: '当前价格异常，无法执行交易。' }
   }
 
   if (actionType === 'buy') {
-    let budget = state.fixedBuyAmount > 0
-      ? Math.min(state.fixedBuyAmount, state.cash)
-      : state.cash * config.buyBudgetRatio
+    const hasOverride = overrideBuyAmount !== undefined && overrideBuyAmount > 0
+    let budget = hasOverride
+      ? Math.min(overrideBuyAmount, state.cash)
+      : (state.fixedBuyAmount > 0
+          ? Math.min(state.fixedBuyAmount, state.cash)
+          : state.cash * config.buyBudgetRatio)
 
     let buyShares = budget > config.minCommission
       ? Math.floor((budget - config.minCommission) / (price * (1 + config.commissionRate) * config.lotSize)) * config.lotSize
