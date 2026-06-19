@@ -1,3 +1,6 @@
+import { app } from 'electron'
+import path from 'path'
+import fs from 'fs'
 import type { AdvisorReport, HabitIndicators } from '../../types/agent'
 
 export interface ReportMeta {
@@ -96,4 +99,16 @@ export function buildReportFilename(meta: ReportMeta, indicators: HabitIndicator
   const winRate = Math.round(indicators.result_group.win_rate * 100)
   const safeProfile = meta.profileName.replace(/[\\/:*?"<>|]/g, '_')
   return `${ts}-胜率${winRate}%-${safeProfile}.md`
+}
+
+export function getReportsDir(): string {
+  return path.join(app.getPath('userData'), 'ai-reports')
+}
+
+export function saveReportMd(filename: string, content: string): string {
+  const dir = getReportsDir()
+  fs.mkdirSync(dir, { recursive: true })
+  const fullPath = path.join(dir, filename)
+  fs.writeFileSync(fullPath, content, 'utf-8')
+  return fullPath
 }

@@ -92,6 +92,7 @@ declare global {
         generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }) => Promise<unknown>
         listReports: (profileId: string, limit?: number) => Promise<unknown>
         getHabitHistory: (profileId: string, limit?: number) => Promise<unknown>
+        openReportsFolder: () => Promise<{ success: boolean; error?: string }>
       }
 
       onTrainingLog?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void

@@ -1,4 +1,5 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
+import fs from 'fs'
 import log from '../logger'
 import { getDb } from '../db'
 import { getBlindDb } from '../blindDb'
@@ -7,9 +8,11 @@ import { computeHabitIndicators } from '../services/habit-analyzer'
 import { buildMessages, parseReportResponse, selectRepresentativeSessions } from '../services/ai-advisor'
 import { callLlm, testConnection } from '../services/ai-client'
 import { resolveEndpoint, DEFAULT_BASE_URL, DEFAULT_MODEL } from '../services/endpoint-resolver'
+import { reportToMarkdown, buildReportFilename, saveReportMd, getReportsDir } from '../services/md-exporter'
 import { DEFAULT_HABIT_CONFIG } from '../../types/agent'
 import type {
   AiAdvisorConfig,
+  AdvisorReport,
   HabitProfile,
   HabitIndicators,
   TradeActionRow,
@@ -180,8 +183,25 @@ export function registerAgentIpc() {
         errorStr
       )
       const record = db.prepare('SELECT * FROM ai_reports WHERE id = ?').get(reportId)
+
+      // md 导出（失败不阻塞报告生成）
+      let mdPath: string | null = null
+      let mdError: string | null = null
+      try {
+        const profileRow = getDb().prepare('SELECT name FROM training_profiles WHERE id = ?').get(payload.profileId) as { name?: string } | undefined
+        const profileName = profileRow?.name ?? payload.profileId
+        const nowSec = Math.floor(Date.now() / 1000)
+        const reportMeta = { profileId: payload.profileId, profileName, sessionCount: habitProfile.session_count, model: config.model, createdAt: nowSec }
+        const mdContent = reportToMarkdown(parsed.report as AdvisorReport, habitProfile.indicators, reportMeta)
+        const filename = buildReportFilename(reportMeta, habitProfile.indicators)
+        mdPath = saveReportMd(filename, mdContent)
+      } catch (e) {
+        mdError = String(e)
+        log.error('[agent] md export failed:', e)
+      }
+
       if (!llmResult.ok) return fail(llmResult.error || 'llm_failed', `LLM 调用失败：${llmResult.error}`)
-      return ok(record)
+      return ok({ ...(record as Record<string, unknown>), md_path: mdPath, md_error: mdError, representative_sessions: repSessions })
     } catch (error) {
       log.error('[agent] generateReport ERROR:', error)
       return fail('generate_failed', String(error))
@@ -214,4 +234,17 @@ export function registerAgentIpc() {
       return fail('get_habit_history_failed', String(error))
     }
   })
+
+  ipcMain.handle('agent:openReportsFolder', async () => {
+    try {
+      const dir = getReportsDir()
+      fs.mkdirSync(dir, { recursive: true })
+      await shell.openPath(dir)
+      return { success: true }
+    } catch (error) {
+      log.error('[agent] openReportsFolder ERROR:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+}
 }

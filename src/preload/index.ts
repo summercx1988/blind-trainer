@@ -114,6 +114,8 @@ const electronAPI = {
       invoke('agent:listReports', { profileId, limit }),
     getHabitHistory: (profileId: string, limit?: number): Promise<unknown> =>
       invoke('agent:getHabitHistory', { profileId, limit }),
+    openReportsFolder: (): Promise<{ success: boolean; error?: string }> =>
+      invoke('agent:openReportsFolder'),
   },
 
   onTrainingLog: (callback: (event: unknown, data: { stream: string; text: string }) => void) => {
