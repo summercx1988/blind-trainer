@@ -234,6 +234,48 @@ export interface ProfileDeleteData {
   profileId: string
 }
 
+export interface TrainingProfileRecord {
+  id: string
+  name: string
+  initial_capital: number
+  current_capital: number
+  total_sessions: number
+  total_pnl: number
+  total_wins: number
+  total_losses: number
+  total_duration_seconds: number
+  total_holding_days: number
+  total_trades_count: number
+  total_winning_trades: number
+  avg_session_return_pct: number
+  best_session_return_pct: number
+  worst_session_return_pct: number
+  max_drawdown_pct: number
+  is_active: number
+  created_at: number
+  updated_at: number
+}
+
+export interface ProfileStatsSessionTrendPoint {
+  date: number
+  pnlPct: number
+}
+
+export interface ProfileStatsDailyStat {
+  day: string
+  count: number
+  avgPnlPct: number
+  totalPnl: number
+  avgWinRatePct: number
+  avgDailyReturnPct: number
+}
+
+export interface ProfileStats {
+  profile: TrainingProfileRecord
+  sessionTrend: ProfileStatsSessionTrendPoint[]
+  dailyStats: ProfileStatsDailyStat[]
+}
+
 export function getPlatformErrorMessage(result: PlatformResult<unknown> | undefined, fallback = '操作失败'): string {
   if (!result || result.success !== false) return fallback
   return result.error?.message || fallback
