@@ -28,7 +28,7 @@ export function reportToMarkdown(
   lines.push('')
   lines.push(`> 生成于 ${dateStr} ${timeStr} · 模型 ${meta.model} · 基于 ${meta.sessionCount} 场训练 · profile：${meta.profileName}`)
   lines.push('')
-  lines.push('## 📊 核心指标')
+  lines.push('## 核心指标')
   lines.push('')
   lines.push('| 指标 | 数值 | 健康参考 |')
   lines.push('|---|---|---|')
@@ -46,7 +46,7 @@ export function reportToMarkdown(
   lines.push('')
 
   if (report.strengths.length > 0) {
-    lines.push('## ✅ 优点')
+    lines.push('## 优点')
     lines.push('')
     for (const s of report.strengths) {
       lines.push(`- **${s.indicator} ${s.value}** — ${s.evidence}。${s.comment}`)
@@ -55,7 +55,7 @@ export function reportToMarkdown(
   }
 
   if (report.weaknesses.length > 0) {
-    lines.push('## ⚠️ 缺点')
+    lines.push('## 待改进')
     lines.push('')
     for (const s of report.weaknesses) {
       lines.push(`- **${s.indicator} ${s.value}** — ${s.evidence}。${s.comment}`)
@@ -64,7 +64,7 @@ export function reportToMarkdown(
   }
 
   if (report.bad_habits.length > 0) {
-    lines.push('## 🎯 不良习惯')
+    lines.push('## 不良习惯')
     lines.push('')
     for (const h of report.bad_habits) {
       lines.push(`- **${h.name}** [${h.severity.toUpperCase()}]`)
@@ -76,7 +76,7 @@ export function reportToMarkdown(
   }
 
   if (report.action_plan.length > 0) {
-    lines.push('## 📋 改善计划')
+    lines.push('## 改善计划')
     lines.push('')
     const sorted = [...report.action_plan].sort((a, b) => a.priority - b.priority)
     sorted.forEach((a, i) => {

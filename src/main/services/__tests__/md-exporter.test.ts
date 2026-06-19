@@ -41,12 +41,12 @@ describe('reportToMarkdown', () => {
 
   it('含 4 段点评 + 优先级编号', () => {
     const md = reportToMarkdown(report, indicators, meta)
-    expect(md).toContain('## ✅ 优点')
+    expect(md).toContain('## 优点')
     expect(md).toContain('**盈亏比 1.8**')
-    expect(md).toContain('## ⚠️ 缺点')
-    expect(md).toContain('## 🎯 不良习惯')
+    expect(md).toContain('## 待改进')
+    expect(md).toContain('## 不良习惯')
     expect(md).toContain('[HIGH]')
-    expect(md).toContain('## 📋 改善计划')
+    expect(md).toContain('## 改善计划')
     expect(md).toContain('1. **等回踩再入**')
   })
 

@@ -346,16 +346,92 @@
 }
 
 /* === AI 交易教练报告增强 === */
+.ai-habit-advisor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 16px;
+}
+
+.ai-habit-advisor-trend {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.ai-habit-advisor-trend-label {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.ai-habit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ai-habit-card span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-habit-card strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ai-habit-advisor-indicator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.ai-habit-advisor-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  color: var(--color-up);
+  font-size: 13px;
+  border-left: 3px solid var(--color-up);
+}
+
+.ai-habit-advisor-warning {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  border-left: 3px solid var(--color-warning);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .ai-habit-report-section {
   margin: 12px 0;
   padding: 12px 16px;
-  border-radius: 8px;
-  background: rgba(123, 140, 171, 0.05);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
 }
-.ai-habit-report-section--good { border-left: 4px solid #16a34a; }
-.ai-habit-report-section--warn { border-left: 4px solid #f59e0b; }
-.ai-habit-report-section--bad  { border-left: 4px solid #dc2626; }
-.ai-habit-report-section h4 { margin-top: 0; }
+.ai-habit-report-section--good { border-left-color: var(--color-down); }
+.ai-habit-report-section--warn { border-left-color: var(--color-warning); }
+.ai-habit-report-section--bad  { border-left-color: var(--color-up); }
+.ai-habit-report-section h4 { margin-top: 0; margin-bottom: 8px; font-size: 14px; }
 .ai-habit-report-section li { margin: 6px 0; line-height: 1.6; }
 
 .ai-habit-advisor-radar-wrap {
@@ -363,14 +439,15 @@
   justify-content: center;
   padding: 12px 0;
 }
-.habit-radar-chart { max-width: 100%; }
+.habit-radar-chart { max-width: 100%; color: var(--text-tertiary); }
 
 .ai-habit-advisor-sessions { margin-top: 20px; }
 .session-kline-card {
-  border: 1px solid rgba(123, 140, 171, 0.2);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   margin: 8px 0;
   overflow: hidden;
+  background: var(--bg-card);
 }
 .session-kline-card-header {
   display: flex;
@@ -378,19 +455,116 @@
   gap: 12px;
   padding: 10px 14px;
   cursor: pointer;
-  background: rgba(123, 140, 171, 0.05);
+  background: var(--bg-subtle);
+  transition: background-color 140ms ease;
 }
-.session-kline-card-title { font-weight: 600; }
-.session-kline-card-meta { color: #7b8cab; font-size: 13px; }
-.session-kline-card-toggle { margin-left: auto; color: #505b73; font-size: 13px; }
+.session-kline-card-header:hover { background: var(--bg-card-hover); }
+.session-kline-card-title { font-weight: 600; color: var(--text-primary); }
+.session-kline-card-meta { color: var(--text-secondary); font-size: 13px; font-family: var(--font-mono); }
+.session-kline-card-toggle { margin-left: auto; color: var(--text-tertiary); font-size: 13px; }
 .session-kline-card-body { padding: 8px 14px 14px; }
 .session-kline-card-loading, .session-kline-card-error, .session-kline-card-note {
-  padding: 12px; color: #7b8cab; font-size: 13px;
+  padding: 12px; color: var(--text-secondary); font-size: 13px;
 }
-.session-kline-card-error { color: #dc2626; }
+.session-kline-card-error { color: var(--color-up); }
 
-.ai-habit-advisor-report-md { margin-top: 6px; font-size: 13px; color: #505b73; }
+.ai-habit-advisor-report-md { margin-top: 6px; font-size: 13px; color: var(--text-secondary); }
 .ai-habit-advisor-link-btn {
-  background: none; border: none; color: #2563eb; cursor: pointer;
+  background: none; border: none; color: var(--color-brand); cursor: pointer;
   text-decoration: underline; padding: 0; font-size: 13px;
+  font-family: inherit;
+}
+.ai-habit-advisor-link-btn:hover { color: var(--color-brand-dark); }
+
+.ai-habit-advisor-fallback {
+  padding: 12px 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+}
+
+.ai-habit-advisor-report-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 8px 0 12px;
+  font-family: var(--font-mono);
+}
+
+.ai-habit-advisor-report h3 { margin: 16px 0 8px; }
+.ai-habit-advisor-indicators h3 { margin: 16px 0 12px; }
+.ai-habit-advisor-sessions h4 { margin: 16px 0 8px; }
+
+/* === AI 配置面板 === */
+.ai-advisor-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ai-advisor-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-advisor-settings-row label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.ai-advisor-settings-row input {
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.ai-advisor-settings-row input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.ai-advisor-settings-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.ai-advisor-settings-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.ai-advisor-settings-test-result {
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.ai-advisor-settings-warning {
+  padding: 10px 12px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
 }

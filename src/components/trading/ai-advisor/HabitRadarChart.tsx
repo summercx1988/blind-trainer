@@ -36,23 +36,23 @@ export default function HabitRadarChart({ indicators, size = 280 }: HabitRadarCh
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="habit-radar-chart">
       {gridPolygons.map((pts, i) => (
-        <polygon key={i} points={pts} fill="none" stroke="rgba(123,140,171,0.15)" strokeWidth={1} />
+        <polygon key={i} points={pts} fill="none" stroke="currentColor" strokeOpacity={0.15} strokeWidth={1} />
       ))}
       {axisEnds.map((p, i) => (
-        <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgba(123,140,171,0.2)" strokeWidth={1} />
+        <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="currentColor" strokeOpacity={0.2} strokeWidth={1} />
       ))}
-      <polygon points={dataPolygon} fill="rgba(220,38,38,0.25)" stroke="#dc2626" strokeWidth={2} />
+      <polygon points={dataPolygon} fill="var(--color-up)" fillOpacity={0.25} stroke="var(--color-up)" strokeWidth={2} />
       {dataPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={3} fill="#dc2626" />
+        <circle key={i} cx={p.x} cy={p.y} r={3} fill="var(--color-up)" />
       ))}
       {dims.map((d, i) => {
         const labelPos = pointAt(i, maxRadius + 22)
         return (
           <g key={d.key}>
-            <text x={labelPos.x} y={labelPos.y} textAnchor="middle" dominantBaseline="middle" fontSize={11} fill="#7b8cab">
+            <text x={labelPos.x} y={labelPos.y} textAnchor="middle" dominantBaseline="middle" fontSize={11} fill="currentColor">
               {d.label}
             </text>
-            <text x={labelPos.x} y={labelPos.y + 13} textAnchor="middle" dominantBaseline="middle" fontSize={10} fill="#505b73">
+            <text x={labelPos.x} y={labelPos.y + 13} textAnchor="middle" dominantBaseline="middle" fontSize={10} fill="currentColor" fillOpacity={0.7}>
               {d.raw}
             </text>
           </g>

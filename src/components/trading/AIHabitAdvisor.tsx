@@ -150,8 +150,8 @@ export default function AIHabitAdvisor() {
 
       {error && <div className="ai-habit-advisor-error">{error}</div>}
       {!configReady && !showSettings && (
-        <div className="ai-habit-advisor-warning">
-          ⚠️ 未配置 AI 助手，无法生成 AI 报告（本地指标仍可查看）。
+        <div className="ai-habit-advisor-warning" role="status">
+          未配置 AI 助手，无法生成 AI 报告（本地指标仍可查看）。
           <button onClick={() => setShowSettings(true)}>去配置</button>
         </div>
       )}
@@ -212,7 +212,7 @@ export default function AIHabitAdvisor() {
             <>
               {parsedReport.strengths?.length > 0 && (
                 <div className="ai-habit-report-section ai-habit-report-section--good">
-                  <h4>✅ 优点</h4>
+                  <h4>优点</h4>
                   <ul>{parsedReport.strengths.map((s: { indicator: string; value: string; evidence: string; comment: string }, i: number) => (
                     <li key={i}><strong>{s.indicator} {s.value}</strong> — {s.evidence} {s.comment}</li>
                   ))}</ul>
@@ -220,7 +220,7 @@ export default function AIHabitAdvisor() {
               )}
               {parsedReport.weaknesses?.length > 0 && (
                 <div className="ai-habit-report-section ai-habit-report-section--warn">
-                  <h4>⚠️ 缺点</h4>
+                  <h4>待改进</h4>
                   <ul>{parsedReport.weaknesses.map((s: { indicator: string; value: string; evidence: string; comment: string }, i: number) => (
                     <li key={i}><strong>{s.indicator} {s.value}</strong> — {s.evidence} {s.comment}</li>
                   ))}</ul>
@@ -228,7 +228,7 @@ export default function AIHabitAdvisor() {
               )}
               {parsedReport.bad_habits?.length > 0 && (
                 <div className="ai-habit-report-section ai-habit-report-section--bad">
-                  <h4>🎯 不良习惯</h4>
+                  <h4>不良习惯</h4>
                   <ul>{parsedReport.bad_habits.map((h: { name: string; severity: string; trigger: string; fix: string; evidence_session?: string }, i: number) => (
                     <li key={i}><strong>{h.name}</strong> [{h.severity}] — 触发：{h.trigger}{h.evidence_session ? `（证据：${h.evidence_session}）` : ''} → 建议：{h.fix}</li>
                   ))}</ul>
@@ -236,7 +236,7 @@ export default function AIHabitAdvisor() {
               )}
               {parsedReport.action_plan?.length > 0 && (
                 <div className="ai-habit-report-section">
-                  <h4>📋 改善计划</h4>
+                  <h4>改善计划</h4>
                   <ol>{parsedReport.action_plan.map((a: { priority: number; action: string; rationale: string; expected_impact?: string }, i: number) => (
                     <li key={i}><strong>{a.action}</strong> — {a.rationale}{a.expected_impact ? `（预期：${a.expected_impact}）` : ''}</li>
                   ))}</ol>

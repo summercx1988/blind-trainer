@@ -95,8 +95,8 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
       </div>
       {testResult && <div className="ai-advisor-settings-test-result">{testResult}</div>}
       {!ready && (
-        <div className="ai-advisor-settings-warning">
-          ⚠️ AI 教练将向 {baseUrl || '配置的 Base URL'} 发送你的脱敏训练记录（含已结束 session 的股票代码与动作序列）。配置即视为同意。
+        <div className="ai-advisor-settings-warning" role="status">
+          注意：AI 教练将向 {baseUrl || '配置的 Base URL'} 发送你的脱敏训练记录（含已结束 session 的股票代码与动作序列）。配置即视为同意。
         </div>
       )}
     </div>
