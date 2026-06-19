@@ -113,7 +113,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
 
   const refreshProfileList = useCallback(async () => {
     try {
-      const list = await window.electronAPI?.profile?.list()
+      const list = await window.mobileAPI?.profile?.list()
       setProfileList((list || []) as unknown as TrainingProfile[])
     } catch { /* ignore */ }
   }, [])
@@ -122,7 +122,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
     if (!activeProfile) return
     setStatsLoading(true)
     try {
-      const stats = await window.electronAPI?.profile?.getStats(activeProfile.id)
+      const stats = await window.mobileAPI?.profile?.getStats(activeProfile.id)
       if (stats) {
         setProfileStats(stats as unknown as ProfileStats)
       }
@@ -137,7 +137,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
     let cancelled = false
     const loadProfileList = async () => {
       try {
-        const list = await window.electronAPI?.profile?.list()
+        const list = await window.mobileAPI?.profile?.list()
         if (!cancelled) {
           setProfileList((list || []) as unknown as TrainingProfile[])
         }
@@ -154,7 +154,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
   const handleCreate = async () => {
     setActionMessage('')
     if (!newProfileName.trim()) return
-    const profile = await window.electronAPI?.profile?.create(newProfileName.trim(), newProfileCapital)
+    const profile = await window.mobileAPI?.profile?.create(newProfileName.trim(), newProfileCapital)
     if (profile) {
       onProfileChange(profile as unknown as TrainingProfile)
     }
@@ -165,7 +165,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
 
   const handleLoad = async (profileId: string) => {
     setActionMessage('')
-    const profile = await window.electronAPI?.profile?.load(profileId)
+    const profile = await window.mobileAPI?.profile?.load(profileId)
     if (profile) {
       onProfileChange(profile as unknown as TrainingProfile)
     }
@@ -175,7 +175,7 @@ const ProfileManager = ({ activeProfile, onProfileChange, onClose }: ProfileMana
   const handleDelete = async (profileId: string) => {
     setActionMessage('')
     try {
-      const result = await window.electronAPI?.profile?.delete(profileId) as PlatformResult<ProfileDeleteData> | undefined
+      const result = await window.mobileAPI?.profile?.delete(profileId) as PlatformResult<ProfileDeleteData> | undefined
       if (!result?.success) {
         setActionMessage(getPlatformErrorMessage(result, '删除存档失败'))
         return
