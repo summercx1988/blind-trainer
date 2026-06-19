@@ -16,12 +16,12 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
 
   useEffect(() => {
     void (async () => {
-      const cfg = await window.electronAPI?.agent?.getConfig()
+      const cfg = await window.mobileAPI?.agent?.getConfig() as { baseUrl?: string; model?: string; ready?: boolean; apiKeyMasked?: string } | undefined
       if (cfg) {
-        setBaseUrl(cfg.baseUrl)
-        setModel(cfg.model)
-        setReady(cfg.ready)
-        setMasked(cfg.apiKeyMasked)
+        setBaseUrl(cfg.baseUrl ?? '')
+        setModel(cfg.model ?? '')
+        setReady(Boolean(cfg.ready))
+        setMasked(cfg.apiKeyMasked ?? '')
       }
     })()
   }, [])
@@ -31,9 +31,14 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
     setTestResult(null)
     try {
       if (apiKey || baseUrl || model) {
-        await window.electronAPI?.agent?.saveConfig({ baseUrl, apiKey, model })
+        const r = await window.mobileAPI?.agent?.saveConfig({ baseUrl, apiKey, model }) as { success?: boolean; error?: { message?: string } } | undefined
+        if (r && r.success === false) {
+          setTestResult(`保存失败：${r.error?.message ?? '未知'}`)
+          setTesting(false)
+          return
+        }
       }
-      const r = await window.electronAPI?.agent?.testConnection()
+      const r = await window.mobileAPI?.agent?.testConnection() as { ok?: boolean; latencyMs?: number; error?: string } | undefined
       setTestResult(r?.ok ? `连接成功（${r.latencyMs}ms）` : `失败：${r?.error ?? '未知'}`)
     } finally {
       setTesting(false)
@@ -43,11 +48,15 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await window.electronAPI?.agent?.saveConfig({ baseUrl, apiKey, model })
-      const cfg = await window.electronAPI?.agent?.getConfig()
+      const r = await window.mobileAPI?.agent?.saveConfig({ baseUrl, apiKey, model }) as { success?: boolean; error?: { message?: string } } | undefined
+      if (r && r.success === false) {
+        setTestResult(`保存失败：${r.error?.message ?? '未知'}`)
+        return
+      }
+      const cfg = await window.mobileAPI?.agent?.getConfig() as { baseUrl?: string; model?: string; ready?: boolean; apiKeyMasked?: string } | undefined
       if (cfg) {
-        setReady(cfg.ready)
-        setMasked(cfg.apiKeyMasked)
+        setReady(cfg.ready ?? false)
+        setMasked(cfg.apiKeyMasked ?? '')
       }
       onSaved?.()
     } finally {
