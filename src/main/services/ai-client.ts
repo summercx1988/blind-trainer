@@ -12,13 +12,14 @@ export interface LlmCallResult {
 }
 
 const TIMEOUT_MS = 30_000
+const DEFAULT_MAX_TOKENS = 2048
 
 export async function callLlm(
   config: AiAdvisorConfig,
   endpoint: string,
   messages: Array<{ role: 'system' | 'user'; content: string }>,
   timeoutMs = TIMEOUT_MS,
-  maxTokens = 2048
+  maxTokens = DEFAULT_MAX_TOKENS
 ): Promise<LlmCallResult> {
   if (!config.ready) {
     return { ok: false, content: '', status: null, promptTokens: null, completionTokens: null, durationMs: 0, error: 'not_configured' }
