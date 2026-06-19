@@ -67,6 +67,8 @@ const CHART_STYLES = {
         upColor: '#dc2626',
         downColor: '#16a34a',
         noChangeColor: '#95a5a6',
+        textSize: 12,
+        textWeight: 'bold' as const,
         line: { show: true, style: 'dashed' as const, dashedValue: [4, 4], size: 1 }
       }
     },
@@ -238,6 +240,7 @@ const BaseKlineChart = ({
 
     const chart = init(container, { styles: CHART_STYLES })
     if (chart) {
+      chart.createIndicator('MA', false, { id: 'candle_pane' })
       chart.createIndicator('VOL', false, { height: 72 })
       chartRef.current = chart
     }
