@@ -5,12 +5,13 @@
 """
 
 import os
+import json
 import sqlite3
 import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shrink_seed_for_web import filter_codes, detect_new_stocks, select_packs
+from shrink_seed_for_web import filter_codes, detect_new_stocks, select_packs, export_pack
 
 
 def build_test_db(path):
@@ -131,9 +132,43 @@ def test_select_packs_activity_sort():
         print('✓ test_select_packs_activity_sort 通过')
 
 
+def test_export_pack_and_meta():
+    with tempfile.TemporaryDirectory() as td:
+        src_db = os.path.join(td, 'test.db')
+        out_dir = os.path.join(td, 'out')
+        build_test_db(src_db)
+        os.makedirs(out_dir)
+
+        new_stocks = detect_new_stocks(src_db, '20230101')
+        all_codes = filter_codes(src_db, new_stocks)
+        codes = select_packs(all_codes, src_db, size=2, sort='activity')
+
+        pack_path = export_pack(src_db, out_dir, 'test-pack', codes)
+        assert os.path.exists(pack_path), f'导出文件应存在：{pack_path}'
+        assert pack_path.endswith('test-pack.sqlite'), f'文件名应以 .sqlite 结尾：{pack_path}'
+
+        # 验证导出库结构：只有选中的股票
+        conn = sqlite3.connect(pack_path)
+        exported_codes = {r[0] for r in conn.execute('SELECT DISTINCT code FROM kline_daily').fetchall()}
+        conn.close()
+        assert exported_codes == set(codes), f'导出的股票集应匹配，实际 {exported_codes}，期望 {set(codes)}'
+
+        # 验证 meta.json
+        meta_path = pack_path.replace('.sqlite', '.meta.json')
+        assert os.path.exists(meta_path), f'meta 文件应存在：{meta_path}'
+        with open(meta_path) as f:
+            meta = json.load(f)
+        assert meta['name'] == 'test-pack'
+        assert meta['stock_count'] == len(codes)
+        assert meta['kline_count'] > 0
+        assert 'generated_at' in meta
+        print(f'✓ test_export_pack_and_meta 通过（{meta["stock_count"]}只，{meta["kline_count"]}根K线）')
+
+
 if __name__ == '__main__':
     test_detect_new_stocks()
     test_filter_codes_excludes_st_lowprice_finance()
     test_select_packs()
     test_select_packs_activity_sort()
+    test_export_pack_and_meta()
     print('\n全部测试通过')

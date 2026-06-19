@@ -136,6 +136,77 @@ def select_packs(all_codes, db_path, size=None, sort=None):
     return sorted_codes[:size]
 
 
+def export_pack(src_db_path, out_dir, pack_name, codes):
+    """导出一个精简包到 out_dir/<pack_name>.sqlite，并生成同名 meta.json。
+
+    包含 kline_daily + stock_list 两张表（仅选中股票的数据），带索引，VACUUM 压缩。
+    返回导出文件路径。
+    """
+    pack_path = os.path.join(out_dir, f'{pack_name}.sqlite')
+    if os.path.exists(pack_path):
+        os.remove(pack_path)
+
+    src = sqlite3.connect(src_db_path)
+    dst = sqlite3.connect(pack_path)
+
+    # 建表 + 索引（与种子库 schema 一致）
+    dst.executescript("""
+        CREATE TABLE kline_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, trade_date TEXT,
+            open REAL, high REAL, low REAL, close REAL,
+            volume REAL, amount REAL, change_pct REAL
+        );
+        CREATE TABLE stock_list (
+            code TEXT PRIMARY KEY, name TEXT, market TEXT,
+            industry TEXT, list_date TEXT, updated_at INTEGER
+        );
+        CREATE INDEX idx_kline_code ON kline_daily(code);
+        CREATE INDEX idx_kline_date ON kline_daily(code, trade_date);
+    """)
+
+    placeholders = ','.join('?' * len(codes))
+    # 导数据
+    for row in src.execute(f'SELECT * FROM kline_daily WHERE code IN ({placeholders})', codes):
+        dst.execute('INSERT INTO kline_daily VALUES (?,?,?,?,?,?,?,?,?,?)', row)
+    for row in src.execute(f'SELECT * FROM stock_list WHERE code IN ({placeholders})', codes):
+        dst.execute('INSERT INTO stock_list VALUES (?,?,?,?,?,?)', row)
+    dst.commit()
+    dst.execute('VACUUM')
+    dst.close()
+    src.close()
+
+    # 写 meta
+    write_meta(pack_path, pack_name, codes)
+    return pack_path
+
+
+def write_meta(pack_path, pack_name, codes):
+    """生成 <pack_name>.meta.json，记录包的元信息。"""
+    conn = sqlite3.connect(pack_path)
+    kline_count = conn.execute('SELECT COUNT(*) FROM kline_daily').fetchone()[0]
+    conn.close()
+
+    size_bytes = os.path.getsize(pack_path)
+    meta = {
+        'name': pack_name,
+        'stock_count': len(codes),
+        'kline_count': kline_count,
+        'size_bytes': size_bytes,
+        'size_mb': round(size_bytes / 1024 / 1024, 1),
+        'codes': codes,
+        'generated_at': int(time.time()),
+        'filter_rules': {
+            'exclude_st': True,
+            'exclude_low_price_lt': 3,
+            'exclude_finance': ['银行', '证券', '保险', '红利'],
+            'exclude_new_stock_after': NEW_STOCK_DATE_THRESHOLD,
+        },
+    }
+    meta_path = pack_path.replace('.sqlite', '.meta.json')
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
 def main():
     parser = argparse.ArgumentParser(description='为 PWA 生成精简数据包')
     parser.add_argument('--src', default=DEFAULT_SRC, help='源数据库路径')
