@@ -4,7 +4,7 @@ import StocksSection from './data-management/StocksSection'
 import WorkflowHeader from './workflow/WorkflowHeader'
 import type { WorkflowStep } from './workflow/WorkflowHeader'
 import { SYNC_STRATEGIES, type StockRecord, type SyncProgress, type SyncStrategy } from './data-management/types'
-import type { BackfillExecutionData, DataStats, DataSyncData, MissingCoverageData, PlatformResult } from '../../types/ipc'
+import type { BackfillExecutionData, DataStats, DataSyncData, MissingCoverageData, PlatformResult, UnknownRecord } from '../../types/ipc'
 import { getPlatformErrorMessage } from '../../types/ipc'
 import './DataManagement.css'
 import '../../types/global.d'
@@ -33,8 +33,8 @@ const DataManagement = () => {
     setStocksLoading(true)
     try {
       const [result, statsResult] = await Promise.all([
-        window.electronAPI?.data?.getStockList(STOCK_LIST_PREVIEW_LIMIT),
-        window.electronAPI?.data?.getStats()
+        window.mobileAPI?.data?.getStockList(STOCK_LIST_PREVIEW_LIMIT) as Promise<UnknownRecord[] | null | undefined> | undefined,
+        window.mobileAPI?.data?.getStats() as Promise<DataStats | null | undefined> | undefined,
       ])
       if (statsResult) {
         setSummaryStats(statsResult)
@@ -59,7 +59,7 @@ const DataManagement = () => {
 
   const loadAutoSyncStatus = useCallback(async () => {
     try {
-      const status = await window.electronAPI?.data?.getAutoSyncStatus() as { lastSyncAt: string | null; nextSyncAt: string; syncing: boolean; syncType: string; syncError: string | null } | undefined
+      const status = await window.mobileAPI?.data?.getAutoSyncStatus() as { lastSyncAt: string | null; nextSyncAt: string; syncing: boolean; syncType: string; syncError: string | null } | undefined
       if (status) setAutoSyncStatus(status)
     } catch { /* ignore */ }
   }, [])
@@ -70,7 +70,7 @@ const DataManagement = () => {
     const interval = setInterval(async () => {
       attempts++
       try {
-        const status = await window.electronAPI?.data?.getAutoSyncStatus() as { syncing: boolean; syncType: string; syncError: string | null; lastSyncAt: string | null } | undefined
+        const status = await window.mobileAPI?.data?.getAutoSyncStatus() as { syncing: boolean; syncType: string; syncError: string | null; lastSyncAt: string | null } | undefined
         if (!status) { clearInterval(interval); return }
         setAutoSyncStatus(status as typeof autoSyncStatus)
         if (!status.syncing) {
@@ -101,7 +101,7 @@ const DataManagement = () => {
     void loadStocks()
     void (async () => {
       try {
-        const status = await window.electronAPI?.data?.getAutoSyncStatus() as { syncing: boolean; syncType: string; syncError: string | null; lastSyncAt: string | null; nextSyncAt: string } | undefined
+        const status = await window.mobileAPI?.data?.getAutoSyncStatus() as { syncing: boolean; syncType: string; syncError: string | null; lastSyncAt: string | null; nextSyncAt: string } | undefined
         if (status) {
           setAutoSyncStatus(status as typeof autoSyncStatus)
           if (status.syncing) {
@@ -117,7 +117,7 @@ const DataManagement = () => {
   }, [])
 
   const handleSync = useCallback(async () => {
-    if (!window.electronAPI?.data?.sync) {
+    if (!window.mobileAPI?.data?.sync) {
       setSyncLog(['数据桥接未加载成功，请重启应用后重试。'])
       return
     }
@@ -127,7 +127,7 @@ const DataManagement = () => {
 
     try {
       if (syncCount === 0) {
-        const result = await window.electronAPI?.data?.triggerIncrementalSync() as unknown as PlatformResult<{ started: boolean }> | undefined
+        const result = await window.mobileAPI?.data?.triggerIncrementalSync() as unknown as PlatformResult<{ started: boolean }> | undefined
         if (!result?.success) {
           setSyncing(false)
           setSyncLog([`全量更新失败: ${getPlatformErrorMessage(result, '同步失败')}`])
@@ -136,7 +136,7 @@ const DataManagement = () => {
         setSyncLog(['全量增量更新已在后台启动，您可以离开此页面。同步完成后会弹出系统通知。'])
         void pollSyncStatus()
       } else {
-        const result = await window.electronAPI?.data?.sync(syncCount, syncPeriods) as unknown as PlatformResult<DataSyncData> | undefined
+        const result = await window.mobileAPI?.data?.sync(syncCount, syncPeriods) as unknown as PlatformResult<DataSyncData> | undefined
         if (!result?.success) {
           setSyncing(false)
           setSyncLog([`同步失败: ${getPlatformErrorMessage(result, '同步失败')}`])
@@ -180,7 +180,7 @@ const DataManagement = () => {
   }, [loadStocks, loadAutoSyncStatus, syncCount, syncPeriods])
 
   const handleRebuildStats = useCallback(async () => {
-    if (!window.electronAPI?.data?.rebuildStats) {
+    if (!window.mobileAPI?.data?.rebuildStats) {
       setSyncLog((prev) => [...prev, '统计重建接口不可用，请重启应用后重试。'])
       return
     }
@@ -188,7 +188,7 @@ const DataManagement = () => {
     setRebuildingStats(true)
     setSyncLog((prev) => [...prev, '开始重建统计表（stock_kline_stats）...'])
     try {
-      const result = await window.electronAPI.data.rebuildStats() as unknown as PlatformResult<{
+      const result = await window.mobileAPI.data.rebuildStats() as unknown as PlatformResult<{
         stockCount: number
         dailyCount: number
         m15Count: number
@@ -221,7 +221,7 @@ const DataManagement = () => {
   }, [])
 
   const handleInspectMissing = useCallback(async () => {
-    if (!window.electronAPI?.data?.inspectMissingCoverage) {
+    if (!window.mobileAPI?.data?.inspectMissingCoverage) {
       setSyncLog((prev) => [...prev, '缺失检查接口不可用，请重启应用后重试。'])
       return
     }
@@ -229,7 +229,7 @@ const DataManagement = () => {
     setGapLoading(true)
     setSyncLog((prev) => [...prev, '开始全面检查缺失与滞后数据...'])
     try {
-      const result = await window.electronAPI.data.inspectMissingCoverage() as unknown as PlatformResult<MissingCoverageData> | undefined
+      const result = await window.mobileAPI.data.inspectMissingCoverage() as unknown as PlatformResult<MissingCoverageData> | undefined
       if (!result?.success) {
         setSyncLog((prev) => [...prev, `检查失败: ${getPlatformErrorMessage(result, '缺失检查失败')}`])
         return
@@ -249,7 +249,7 @@ const DataManagement = () => {
   }, [backfilling, gapLoading, rebuildingStats, syncing])
 
   const handleBackfillMissing = useCallback(async () => {
-    if (!window.electronAPI?.data?.executeBackfillPlan) {
+    if (!window.mobileAPI?.data?.executeBackfillPlan) {
       setSyncLog((prev) => [...prev, '缺失补录接口不可用，请重启应用后重试。'])
       return
     }
@@ -261,7 +261,7 @@ const DataManagement = () => {
     setBackfilling(true)
     setSyncLog((prev) => [...prev, '开始按检查结果补录缺失数据，并在完成后刷新汇总...'])
     try {
-      const result = await window.electronAPI.data.executeBackfillPlan({
+      const result = await window.mobileAPI.data.executeBackfillPlan({
         dailyCodes: Array.from(new Set([
           ...gapSummary.intervals['1d'].missingCodes,
           ...gapSummary.intervals['1d'].staleCodes,
