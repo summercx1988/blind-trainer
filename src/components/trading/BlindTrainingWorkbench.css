@@ -1860,3 +1860,84 @@
     animation: none;
   }
 }
+
+/* ========== PWA 移动端适配（design §7）========== */
+
+/* 移动端通用：取消桌面 max-width 约束，全宽铺满 */
+@media (max-width: 768px) {
+  .wt-workbench {
+    max-width: 100%;
+    margin: 0;
+    padding: 0 8px;
+  }
+  .wt-profile-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .wt-profile-name,
+  .wt-profile-capital,
+  .wt-profile-pnl,
+  .wt-profile-sessions {
+    font-size: 12px;
+  }
+}
+
+/* 竖屏：上下堆叠，关键操作区触达友好 */
+@media (orientation: portrait) and (max-width: 768px) {
+  .wt-workbench {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-bottom: 72px; /* 给固定底部动作栏留空间 */
+  }
+  .wt-session {
+    flex: 1;
+  }
+  /* 动作按钮区固定底部（拇指触达区） */
+  .wt-action-area,
+  .wt-action-buttons {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-elevated, #1a1a1a);
+    border-top: 1px solid var(--border, #333);
+    padding: 10px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+  }
+  .wt-action-area button,
+  .wt-action-buttons button {
+    flex: 1;
+    padding: 14px 0;
+    font-size: 14px;
+  }
+}
+
+/* 横屏：左右分栏（左大图，右操作面板） */
+@media (orientation: landscape) and (max-width: 1024px) {
+  .wt-workbench {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .wt-session {
+    flex: 1;
+    min-width: 0;
+  }
+  /* 右侧固定操作面板（账户+日志+买卖） */
+  .wt-profile-bar,
+  .wt-action-area,
+  .wt-action-buttons {
+    flex: 0 0 160px;
+  }
+  .wt-profile-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+}
