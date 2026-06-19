@@ -65,7 +65,10 @@ export async function queryKline(
   limit: number
 ): Promise<Array<Record<string, unknown>>> {
   if (!db) throw new Error('数据库未初始化，请先调用 initDb()')
-  // 种子包只有日K，period 暂时只支持 'daily'，参数保留为后续扩展
+  // 种子包只有日K，period 仅支持 'daily'，其他值当前不处理（保留参数为后续扩展）
+  if (period !== 'daily') {
+    throw new Error(`暂不支持的周期：${period}（当前仅支持 daily）`)
+  }
   const stmt = db.prepare(
     `SELECT code, trade_date, open, high, low, close, volume, amount, change_pct
      FROM kline_daily
