@@ -207,15 +207,9 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     void fetchActiveProfile()
   }, [fetchActiveProfile])
 
-  const computeFixedBuyShares = useCallback((capital: number, price: number): number => {
-    if (!Number.isFinite(price) || price <= 0 || capital <= 0) return 0
-    const ratio = positionRatioRef.current
-    const budget = capital * ratio
-    const effectivePrice = price * (1 + DEFAULT_TRADING_CONFIG.commissionRate)
-    const affordable = budget > DEFAULT_TRADING_CONFIG.minCommission
-      ? (budget - DEFAULT_TRADING_CONFIG.minCommission) / effectivePrice
-      : 0
-    return Math.floor(affordable / DEFAULT_TRADING_CONFIG.lotSize) * DEFAULT_TRADING_CONFIG.lotSize
+  const computeFixedBuyAmount = useCallback((capital: number): number => {
+    if (capital <= 0) return 0
+    return capital * positionRatioRef.current
   }, [])
 
   const currentBar = useMemo(() => {
@@ -620,7 +614,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       setNotice(`⚠ 保存会话异常: ${String(err)}`)
     }
 
-    const nextAccount = createInitialTradingState(capital, computeFixedBuyShares(capital, sample.klines[safeWarmup]?.close || 0))
+    const nextAccount = createInitialTradingState(capital, computeFixedBuyAmount(capital))
     sessionIdRef.current = resolvedSessionId
     activeSampleRef.current = sample
     sessionStatusRef.current = 'running'
@@ -641,7 +635,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     setActionError('')
     setNotice('')
     finishingRef.current = false
-  }, [computeFixedBuyShares])
+  }, [computeFixedBuyAmount])
 
   const startRandomSession = useCallback(async () => {
     if (samples.length === 0) {
@@ -864,7 +858,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           profileId: curProfile?.id
         })
         const resolvedSessionId = (saved as SaveSessionResult | undefined)?.id || `session_local_${Date.now()}`
-        const nextAccount = createInitialTradingState(nextCapital, computeFixedBuyShares(nextCapital, sample.klines[safeWarmup]?.close || 0))
+        const nextAccount = createInitialTradingState(nextCapital, computeFixedBuyAmount(nextCapital))
         sessionIdRef.current = resolvedSessionId
         activeSampleRef.current = sample
         sessionStatusRef.current = 'running'
@@ -894,7 +888,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     } finally {
       setActionPending(false)
     }
-  }, [regime, period, requestRandomSamples, persistTradeAction, currentBarIndex, refreshProfileCaches, getCurrentSessionFinalCapital, computeFixedBuyShares])
+  }, [regime, period, requestRandomSamples, persistTradeAction, currentBarIndex, refreshProfileCaches, getCurrentSessionFinalCapital, computeFixedBuyAmount])
 
   const handleContinueTraining = useCallback(async () => {
     const carryCapital = getCurrentSessionFinalCapital() ?? undefined

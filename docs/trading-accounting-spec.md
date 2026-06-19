@@ -6,27 +6,34 @@
 
 ---
 
-## 1. 仓位（fixedBuyShares）
+## 1. 仓位（fixedBuyAmount）
 
 ### 1.1 计算公式
 
-会话开始时（首次进入或换样本时），按以下公式一次性计算本会话的固定买入股数，写入 `TradingState.fixedBuyShares`：
+会话开始时（首次进入或换样本时），按以下公式一次性计算本会话的固定买入金额，写入 `TradingState.fixedBuyAmount`：
 
 ```
-budget = 初始资金 × 仓位比例档位
-effectivePrice = price × (1 + commissionRate)
-affordable = (budget - minCommission) / effectivePrice
-fixedBuyShares = floor(affordable / lotSize) × lotSize
+fixedBuyAmount = 初始资金 × 仓位比例档位
 ```
 
 - `初始资金`：当前 profile 的 `current_capital`（默认 100,000）。
 - `仓位比例档位`：见 §1.2。
-- `effectivePrice`：把按比例的 commissionRate 折算进单价，确保成交额+手续费 ≤ 预算。
+- 之后每次点 B 都用「当前买入价 × 实时换算股数」贴近这个金额，不会因价格变动导致金额超支。
+
+**实时换算股数（每次 B 重新算）**：
+
+```
+budget = min(fixedBuyAmount, state.cash)        # 当前现金不够时自动夹到现金
+effectivePrice = price × (1 + commissionRate)
+buyShares = floor((budget - minCommission) / effectivePrice / lotSize) × lotSize
+```
+
+- `price`：本次买入成交价（次根开盘 or 当根收盘）。
+- 当 `state.cash < fixedBuyAmount` 时（亏损后资金缩水），`budget` 自动夹到 `state.cash`，买入金额自适应缩减，不会因金额不足被直接拒绝。
 - `minCommission`：单笔最低手续费（默认 5 元），预算需先扣除。
 - `lotSize`：100 股（A 股最小交易单位），向下取整。
-- 之后每次点 B 都买 `fixedBuyShares` 股，直到剩余现金不足以下一手。
 
-**保证可加仓到满仓**：因为 fixedBuyShares 已预留手续费空间，两次（或多次）连续买入时每次花费（含费）都不会超过档位预算，剩余现金始终够下一次。
+**为什么是金额而非股数**：早期实现曾按会话开始时的成交价把金额换算成「固定股数」存入 `fixedBuyShares`，但卖出后再次买入时，若价格上涨，`固定股数 × 高价` 会超过剩余资金，触发「剩余资金不足以下一手」误报。改为「固定金额」后每次按当前价换算股数，金额始终贴近档位预算。
 
 ### 1.2 仓位档位
 
@@ -45,12 +52,15 @@ fixedBuyShares = floor(affordable / lotSize) × lotSize
 
 ### 1.3 示例
 
-- 选 1/2，首根成交价 10 元 → `100000 × 0.5 / 10 = 5000` → 每次 B 买 5000 股。
-- 选 1/3，首根成交价 10 元 → `100000 × 0.3333 / 10 ≈ 3333.3` → 取整到 100 股 → 3300 股。
+- 选 1/2 → `fixedBuyAmount = 100000 × 0.5 = 50000` 元。
+  - B @ 10 元 → 实时换算 4900 股（含费贴近 50000）。
+  - S 后 B @ 12 元 → 实时换算 4100 股（含费贴近 50000）。
+  - S 后 B @ 25 元 → 实时换算 2000 股（含费贴近 50000）。
+- 选 1/3 → `fixedBuyAmount ≈ 33333` 元 → B @ 10 元实时换算 3300 股。
 
 ### 1.4 生效时机
 
-- **下次进入会话或重新加载样本时生效**——不在训练中途改变 `fixedBuyShares`，避免行为漂移。
+- **下次进入会话或重新加载样本时生效**——不在训练中途改变 `fixedBuyAmount`，避免行为漂移。
 - 与 `samplePoolBars`/`candidateCount` 一致。
 
 ---
@@ -84,7 +94,7 @@ fixedBuyShares = floor(affordable / lotSize) × lotSize
 
 ### 2.3 卖出后
 
-卖出永远全平（`sellShares = state.shares`），卖出后 `avgPrice = 0`、`shares = 0`、`fixedBuyShares` 保留。
+卖出永远全平（`sellShares = state.shares`），卖出后 `avgPrice = 0`、`shares = 0`、`fixedBuyAmount` 保留。
 
 ---
 
@@ -187,5 +197,5 @@ unrealizedPnl = (markPrice - avgPrice) × shares
 | `initialCapital` | 100,000 | 默认初始资金 |
 | `commissionRate` | 0.0003 | 万三手续费率 |
 | `minCommission` | 5 | 单笔最低 5 元 |
-| `buyBudgetRatio` | 0.5 | 兜底半仓比例（仅当 `fixedBuyShares = 0` 时回退使用） |
+| `buyBudgetRatio` | 0.5 | 兜底半仓比例（仅当 `fixedBuyAmount = 0` 时回退使用） |
 | `lotSize` | 100 | A 股最小交易单位 |

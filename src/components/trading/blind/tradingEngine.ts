@@ -45,20 +45,32 @@ export interface SessionSettlement {
 
 export const createInitialTradingState = (
   initialCapital = DEFAULT_TRADING_CONFIG.initialCapital,
-  fixedBuyShares = 0
+  fixedBuyAmount = 0
 ): TradingState => {
   return {
     cash: initialCapital,
     shares: 0,
     avgPrice: 0,
     realizedPnl: 0,
-    fixedBuyShares
+    fixedBuyAmount
   }
 }
 
 const calcCommission = (amount: number, config: TradingEngineConfig): number => {
   if (amount <= 0) return 0
   return Math.max(config.minCommission, amount * config.commissionRate)
+}
+
+const calcMaxAffordableShares = (
+  cash: number,
+  price: number,
+  config: TradingEngineConfig
+): number => {
+  if (cash <= 0 || price <= 0) return 0
+  const affordable = cash > config.minCommission
+    ? (cash - config.minCommission) / (price * (1 + config.commissionRate))
+    : 0
+  return Math.floor(affordable / config.lotSize) * config.lotSize
 }
 
 export const computeEquity = (state: TradingState, markPrice: number): number => {
@@ -83,20 +95,27 @@ export const evaluateManualAction = (
   }
 
   if (actionType === 'buy') {
-    const buyShares = state.fixedBuyShares > 0
-      ? state.fixedBuyShares
-      : (() => {
-          const budget = state.cash * config.buyBudgetRatio
-          return Math.floor(budget / (price * config.lotSize)) * config.lotSize
-        })()
+    let budget = state.fixedBuyAmount > 0
+      ? Math.min(state.fixedBuyAmount, state.cash)
+      : state.cash * config.buyBudgetRatio
+
+    let buyShares = budget > config.minCommission
+      ? Math.floor((budget - config.minCommission) / (price * (1 + config.commissionRate) * config.lotSize)) * config.lotSize
+      : 0
+
     if (buyShares <= 0) {
       return { ok: false, error: `可用资金不足，无法按 ${config.lotSize} 股单位买入。` }
     }
 
-    const amount = buyShares * price
-    const commission = calcCommission(amount, config)
+    let amount = buyShares * price
+    let commission = calcCommission(amount, config)
     if (state.cash < amount + commission) {
-      return { ok: false, error: '剩余资金不足以下一手。' }
+      buyShares = calcMaxAffordableShares(state.cash, price, config)
+      if (buyShares <= 0) {
+        return { ok: false, error: '剩余资金不足以下一手。' }
+      }
+      amount = buyShares * price
+      commission = calcCommission(amount, config)
     }
 
     const newShares = state.shares + buyShares
@@ -108,7 +127,7 @@ export const evaluateManualAction = (
       shares: newShares,
       avgPrice: newAvgPrice,
       realizedPnl: state.realizedPnl,
-      fixedBuyShares: state.fixedBuyShares
+      fixedBuyAmount: state.fixedBuyAmount
     }
 
     return {
@@ -139,7 +158,7 @@ export const evaluateManualAction = (
       shares: 0,
       avgPrice: 0,
       realizedPnl: state.realizedPnl + realizedPnl,
-      fixedBuyShares: state.fixedBuyShares
+      fixedBuyAmount: state.fixedBuyAmount
     }
 
     return {
@@ -204,7 +223,7 @@ export const settleAtSessionEnd = (
       shares: 0,
       avgPrice: 0,
       realizedPnl: state.realizedPnl + realizedPnl,
-      fixedBuyShares: state.fixedBuyShares
+      fixedBuyAmount: state.fixedBuyAmount
     },
     autoCloseTrade: {
       actionType: 'sell',
