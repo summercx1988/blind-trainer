@@ -344,6 +344,15 @@ const SessionToolbar = ({
   return (
     <>
       <div className="wt-session-bar">
+        {activeSample && activeSample.klines.length > 0 && (
+          <div className="wt-progress" aria-label="训练进度">
+            <div
+              className="wt-progress-bar"
+              style={{ width: `${Math.min(100, ((currentBarIndex + 1) / activeSample.klines.length) * 100).toFixed(1)}%` }}
+            />
+          </div>
+        )}
+        <div className="wt-session-bar-row">
         <div className="wt-session-info">
           <span className="wt-session-tag">{activeSample?.period || period}</span>
           {activeSample && (
@@ -394,6 +403,7 @@ const SessionToolbar = ({
               开始训练
             </button>
           )}
+        </div>
         </div>
       </div>
 

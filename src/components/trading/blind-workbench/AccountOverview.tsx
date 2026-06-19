@@ -21,6 +21,7 @@ interface AccountOverviewProps {
   tradeMarkers: TradeMarker[]
   benchmarkMarkers?: BaseMarker[]
   visibleCount: number
+  sessionWinRate: number | null
   onVisibleCountChange: (value: number) => void
 }
 
@@ -35,6 +36,7 @@ const AccountOverview = ({
   tradeMarkers,
   benchmarkMarkers,
   visibleCount,
+  sessionWinRate,
   onVisibleCountChange
 }: AccountOverviewProps) => {
   const prevBar = visibleBars.length >= 2 ? visibleBars[visibleBars.length - 2] : null
@@ -85,6 +87,13 @@ const AccountOverview = ({
           <div className={`wt-acct-value ${account.realizedPnl >= 0 ? 'up' : 'down'}`}>{toSignedMoney(account.realizedPnl)}</div>
           <div className={`wt-acct-sub ${account.realizedPnl >= 0 ? 'up' : 'down'}`}>
             {realizedPct !== null ? toSignedPct(realizedPct) : '-'}
+          </div>
+        </div>
+        <div className="wt-acct-card">
+          <div className="wt-acct-title">本局胜率</div>
+          <div className="wt-acct-value">{sessionWinRate !== null ? `${sessionWinRate.toFixed(1)}%` : '-'}</div>
+          <div className="wt-acct-sub">
+            {sessionWinRate !== null ? '基于已结算卖单' : '尚未卖出'}
           </div>
         </div>
       </div>

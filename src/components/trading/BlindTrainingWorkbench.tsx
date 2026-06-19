@@ -314,6 +314,13 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       }))
   }, [actions, currentBarIndex, visibleStartIndex])
 
+  const sessionWinRate = useMemo(() => {
+    const sells = actions.filter((a) => a.actionType === 'sell')
+    if (sells.length === 0) return null
+    const wins = sells.filter((a) => (a.realizedPnl ?? 0) > 0).length
+    return (wins / sells.length) * 100
+  }, [actions])
+
   const accountEquity = useMemo(() => {
     const markPrice = currentBar?.close || account.avgPrice || 0
     return computeEquity(account, markPrice)
@@ -1165,6 +1172,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 visibleBars={visibleBars}
                 tradeMarkers={visibleTradeMarkers}
                 visibleCount={visibleCount}
+                sessionWinRate={sessionWinRate}
                 onVisibleCountChange={setVisibleCount}
               />
 
