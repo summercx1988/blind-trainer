@@ -108,3 +108,8 @@ export async function queryStockList(
 export function isDbReady(): boolean {
   return db !== null
 }
+
+/** 获取行情库实例（供 sampler 等模块查询，不对外暴露写权限） */
+export function getMarketDb(): Database | null {
+  return db
+}
