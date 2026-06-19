@@ -1,3 +1,4 @@
+import { type RefObject } from 'react'
 import type { ManualActionType } from '../blind/types'
 
 interface ActionSectionProps {
@@ -7,6 +8,7 @@ interface ActionSectionProps {
   onActionClick: (actionType: ManualActionType) => void
   onNextBar: () => void
   onSwitchSample: () => void
+  holdBtnRef?: RefObject<HTMLButtonElement | null>
 }
 
 const ActionSection = ({
@@ -15,7 +17,8 @@ const ActionSection = ({
   actionError,
   onActionClick,
   onNextBar,
-  onSwitchSample
+  onSwitchSample,
+  holdBtnRef
 }: ActionSectionProps) => {
   return (
     <div className="wt-action-section">
@@ -26,7 +29,7 @@ const ActionSection = ({
         <button className="wt-btn wt-btn-sell" onClick={() => onActionClick('sell')} disabled={actionPending || accountShares <= 0} aria-label="卖出（快捷键S）">
           卖出 <kbd>S</kbd>
         </button>
-        <button className="wt-btn wt-btn-hold" onClick={() => onActionClick('hold')} disabled={actionPending} aria-label="持有（快捷键H）">
+        <button ref={holdBtnRef} className="wt-btn wt-btn-hold" onClick={() => onActionClick('hold')} disabled={actionPending} aria-label="持有（快捷键H）">
           持有 <kbd>H</kbd>
         </button>
         <button className="wt-btn wt-btn-next-bar" onClick={onNextBar} disabled={actionPending} aria-label="推进下一根K线（快捷键右箭头）">

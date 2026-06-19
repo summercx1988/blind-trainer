@@ -56,6 +56,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [sampleLoading, setSampleLoading] = useState(false)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false)
 
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('idle')
   const [sessionId, setSessionId] = useState('')
@@ -370,6 +371,8 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   }, [sessionId])
 
   const finishingRef = useRef(false)
+  const holdBtnRef = useRef<HTMLButtonElement | null>(null)
+  const prevBarIndexRef = useRef(0)
 
   const finishSession = useCallback(async (
     reason: 'manual' | 'skip' | 'auto_end' | 'latest_end' = 'manual',
@@ -605,13 +608,13 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       })
       if (!saved || ((saved as unknown as Record<string, unknown>)?.error)) {
         window.electronAPI?.log?.('error', '[WT] saveSession failed', String((saved as unknown as Record<string, unknown>)?.error || 'unknown'))
-        setNotice(`⚠ 保存会话失败: ${(saved as unknown as Record<string, unknown>)?.error || '未知错误'}`)
+        setNotice(`保存会话失败: ${(saved as unknown as Record<string, unknown>)?.error || '未知错误'}`)
       }
       resolvedSessionId = (saved as SaveSessionResult | undefined)?.id || `session_local_${Date.now()}`
     } catch (err) {
       window.electronAPI?.log?.('error', '[WT] saveSession exception', String(err))
       resolvedSessionId = `session_local_${Date.now()}`
-      setNotice(`⚠ 保存会话异常: ${String(err)}`)
+      setNotice(`保存会话异常: ${String(err)}`)
     }
 
     const nextAccount = createInitialTradingState(capital, computeFixedBuyAmount(capital))
@@ -1015,6 +1018,31 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [sessionStatus, actionPending, handleActionClick, handleSwitchSample, handleStepForward])
 
+  // "?" 键开关快捷键 cheat sheet
+  useEffect(() => {
+    const handleCheatKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault()
+        setCheatSheetOpen((v) => !v)
+      } else if (e.key === 'Escape' && cheatSheetOpen) {
+        e.preventDefault()
+        setCheatSheetOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleCheatKey)
+    return () => window.removeEventListener('keydown', handleCheatKey)
+  }, [cheatSheetOpen])
+
+  // 切到下一根 K 线后，自动把焦点移到「持有」按钮 — 键盘流用户最常见操作
+  useEffect(() => {
+    if (sessionStatus !== 'running') return
+    if (currentBarIndex > prevBarIndexRef.current) {
+      holdBtnRef.current?.focus()
+    }
+    prevBarIndexRef.current = currentBarIndex
+  }, [currentBarIndex, sessionStatus])
+
   return (
     <div className="wt-workbench">
       <ContinuousBar continuousMode={continuousMode} stats={continuousStats} />
@@ -1053,10 +1081,19 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               )}
             </span>
           )}
+          <button
+            type="button"
+            className="wt-cheat-trigger"
+            onClick={() => setCheatSheetOpen(true)}
+            aria-label="打开快捷键说明"
+            title="快捷键说明（?）"
+          >
+            快捷键 <kbd>?</kbd>
+          </button>
         </div>
       </div>
 
-      {notice && <div className="wt-notice">{notice}</div>}
+      {notice && <div className="wt-notice" role="status">{notice}</div>}
 
       {sessionStatus === 'idle' && !dataReady && (
         <div className="wt-setup">
@@ -1175,6 +1212,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 onActionClick={handleActionClick}
                 onNextBar={() => void handleStepForward()}
                 onSwitchSample={() => void handleSwitchSample()}
+                holdBtnRef={holdBtnRef}
               />
 
               <ActionLog actions={actions} />
@@ -1207,6 +1245,47 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           onExitContinuous={handleExitContinuous}
           onSwitchSample={() => void handleSwitchSample()}
         />
+      )}
+
+      {cheatSheetOpen && (
+        <div
+          className="wt-cheat-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wt-cheat-title"
+          onClick={() => setCheatSheetOpen(false)}
+        >
+          <div className="wt-cheat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="wt-cheat-header">
+              <h3 id="wt-cheat-title">盲训快捷键</h3>
+              <button
+                type="button"
+                className="wt-cheat-close"
+                onClick={() => setCheatSheetOpen(false)}
+                aria-label="关闭"
+              >
+                关闭 <kbd>Esc</kbd>
+              </button>
+            </div>
+            <table className="wt-cheat-table">
+              <thead>
+                <tr><th>键</th><th>动作</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><kbd>B</kbd></td><td>买入（按当前仓位档位）</td></tr>
+                <tr><td><kbd>S</kbd></td><td>卖出（清仓当前持仓）</td></tr>
+                <tr><td><kbd>H</kbd> / <kbd>Space</kbd></td><td>持有（推进到下一根 K 线后再决策）</td></tr>
+                <tr><td><kbd>→</kbd></td><td>推进到下一根 K 线（不动仓）</td></tr>
+                <tr><td><kbd>N</kbd></td><td>换一只样本（结算当前 session）</td></tr>
+                <tr><td><kbd>?</kbd></td><td>打开 / 关闭本说明</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>关闭弹窗</td></tr>
+              </tbody>
+            </table>
+            <p className="wt-cheat-hint">
+              切到下一根 K 线后，焦点会自动落在「持有」按钮 — 直接按 H 可继续推进。
+            </p>
+          </div>
+        </div>
       )}
     </div>
   )
