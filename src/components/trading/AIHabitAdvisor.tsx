@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import AiAdvisorSettings from './blind-workbench/AiAdvisorSettings'
-import type { HabitIndicators } from '../../types/agent'
+import HabitRadarChart from './ai-advisor/HabitRadarChart'
+import SessionKlineCard from './ai-advisor/SessionKlineCard'
+import type { HabitIndicators, RepresentativeSession } from '../../types/agent'
 
 interface HabitProfileRecord {
   id: string
@@ -18,6 +20,9 @@ interface ReportRecord {
   duration_ms: number | null
   error: string | null
   created_at: number
+  md_path?: string | null
+  md_error?: string | null
+  representative_sessions?: RepresentativeSession[]
 }
 
 const isPlatformOk = (r: unknown): r is { data: unknown } =>
@@ -35,6 +40,7 @@ export default function AIHabitAdvisor() {
   const [habit, setHabit] = useState<HabitProfileRecord | null>(null)
   const [history, setHistory] = useState<HabitProfileRecord[]>([])
   const [report, setReport] = useState<ReportRecord | null>(null)
+  const [repSessions, setRepSessions] = useState<RepresentativeSession[]>([])
   const [loadingHabit, setLoadingHabit] = useState(false)
   const [loadingReport, setLoadingReport] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +93,7 @@ export default function AIHabitAdvisor() {
       const data = unwrap<ReportRecord>(r)
       if (data) {
         setReport(data)
+        if (data.representative_sessions) setRepSessions(data.representative_sessions)
       } else {
         setReportError((r as { error?: { message?: string } })?.error?.message ?? '生成失败')
       }
@@ -174,10 +181,32 @@ export default function AIHabitAdvisor() {
       {report && (
         <section className="ai-habit-advisor-report">
           <h3>AI 诊断报告</h3>
+          {habit && (
+            <div className="ai-habit-advisor-radar-wrap">
+              <HabitRadarChart indicators={habit.indicators} />
+            </div>
+          )}
           <div className="ai-habit-advisor-report-meta">
             生成于 {new Date(report.created_at * 1000).toLocaleString('zh-CN')}
             {report.model ? ` · ${report.model}` : ''}
             {report.prompt_tokens != null ? ` · ${report.prompt_tokens + (report.completion_tokens ?? 0)} tokens` : ''}
+            {(report.md_path || report.md_error) && (
+              <div className="ai-habit-advisor-report-md">
+                {report.md_path ? (
+                  <>
+                    已导出：{report.md_path.split('/').pop()}{' '}
+                    <button
+                      className="ai-habit-advisor-link-btn"
+                      onClick={() => window.electronAPI?.agent?.openReportsFolder()}
+                    >
+                      打开文件夹
+                    </button>
+                  </>
+                ) : (
+                  <span className="ai-habit-advisor-error">md 导出失败：{report.md_error}</span>
+                )}
+              </div>
+            )}
           </div>
           {parsedReport && !('fallback_text' in parsedReport) ? (
             <>
@@ -218,6 +247,14 @@ export default function AIHabitAdvisor() {
             <pre className="ai-habit-advisor-fallback">{parsedReport.fallback_text}</pre>
           ) : (
             <div className="ai-habit-advisor-error">报告解析失败，原始内容见日志</div>
+          )}
+          {repSessions.length > 0 && (
+            <div className="ai-habit-advisor-sessions">
+              <h4>代表性交易（Top-3）</h4>
+              {repSessions.map((s, i) => (
+                <SessionKlineCard key={i} session={s} />
+              ))}
+            </div>
           )}
         </section>
       )}

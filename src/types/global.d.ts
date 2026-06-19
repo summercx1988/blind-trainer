@@ -95,6 +95,10 @@ declare global {
         openReportsFolder: () => Promise<{ success: boolean; error?: string }>
       }
 
+      session?: {
+        getKlineForSession: (sessionId: string) => Promise<unknown>
+      }
+
       onTrainingLog?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void
       removeTrainingLogListener?: (callback: (event: unknown, data: { stream: string; text: string }) => void) => void
 

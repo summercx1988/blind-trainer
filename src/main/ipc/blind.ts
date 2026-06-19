@@ -3,6 +3,7 @@ import log from '../logger'
 import { getBlindDb } from '../blindDb'
 import { getDb } from '../db'
 import { calculateSessionReviewMetrics } from '../sessionReview'
+import { ok, fail } from './platformResult'
 import { registerAgentIpc } from './agentIpc'
 import type {
   SaveSessionInput,
@@ -740,6 +741,72 @@ export const registerBlindIpc = () => {
       exitEfficiencyScore: 0.7,
       disciplineScore: 0.85,
       skipQuality: 'good'
+    }
+  })
+
+  ipcMain.handle('session:getKlineForSession', async (_, payload: { sessionId: string }) => {
+    try {
+      const blindDb = getBlindDb()
+      const marketDb = getDb()
+      const session = blindDb.prepare(`
+        SELECT id, stock_code, interval_type, started_at
+        FROM training_sessions WHERE id = ?
+      `).get(payload.sessionId) as { id: string; stock_code: string; interval_type: string; started_at: number } | undefined
+      if (!session) return fail('session_not_found', '找不到 session')
+
+      const actions = blindDb.prepare(`
+        SELECT bar_index, action_type, price FROM trade_actions
+        WHERE session_id = ? AND action_type IN ('buy','sell') AND price IS NOT NULL
+        ORDER BY bar_index ASC
+      `).all(payload.sessionId) as Array<{ bar_index: number; action_type: 'buy' | 'sell'; price: number }>
+
+      if (actions.length === 0) {
+        return ok({ bars: [], markers: [], note: '该 session 无买卖动作' })
+      }
+
+      const maxBar = Math.max(...actions.map(a => a.bar_index))
+      const WARMUP = 20
+      const TAIL_BUFFER = 10
+      const totalBars = WARMUP + maxBar + TAIL_BUFFER
+
+      // 降级：用 started_at（训练真实开始时间）作为 K 线终点锚点，往前取 totalBars 根。
+      // samples 表不持久化起点，无法精确反推 warmup 区间。
+      const anchorDate = new Date(session.started_at * 1000)
+      const endDate = anchorDate.toISOString().slice(0, 10)
+
+      const klines = marketDb.prepare(`
+        SELECT trade_date, open, high, low, close, volume
+        FROM kline_daily
+        WHERE code = ? AND trade_date <= ?
+        ORDER BY trade_date DESC
+        LIMIT ?
+      `).all(session.stock_code, endDate, totalBars) as Array<{
+        trade_date: string; open: number; high: number; low: number; close: number; volume: number
+      }>
+
+      const bars = klines.reverse().map(k => ({
+        timestamp: new Date(k.trade_date + 'T00:00:00+08:00').getTime() / 1000,
+        open: k.open, high: k.high, low: k.low, close: k.close, volume: k.volume ?? 0,
+      }))
+
+      const markers = actions
+        .map(a => ({
+          barIndex: WARMUP + a.bar_index,
+          actionType: a.action_type,
+          price: a.price,
+        }))
+        .filter(m => m.barIndex < bars.length)
+
+      return ok({
+        bars,
+        markers,
+        note: bars.length < totalBars
+          ? `仅取到 ${bars.length} 根 K 线（期望 ${totalBars}），可能因上市较晚`
+          : undefined,
+      })
+    } catch (error) {
+      log.error('[session] getKlineForSession ERROR:', error)
+      return fail('kline_query_failed', String(error))
     }
   })
 

@@ -116,6 +116,7 @@ export interface AiReportRecord {
 }
 
 export interface RepresentativeSession {
+  sessionId: string
   stock_code: string
   stock_name: string
   interval_type: string
@@ -141,4 +142,25 @@ export interface AiAdvisorConfig {
   apiKey: string
   model: string
   ready: boolean
+}
+
+export interface KlineBar {
+  timestamp: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface KlineMarker {
+  barIndex: number
+  actionType: 'buy' | 'sell'
+  price: number
+}
+
+export interface SessionKlineResult {
+  bars: KlineBar[]
+  markers: KlineMarker[]
+  note?: string
 }

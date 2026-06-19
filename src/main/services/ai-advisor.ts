@@ -116,6 +116,7 @@ export function selectRepresentativeSessions(
         realized_pnl: a.realized_pnl ?? undefined,
       }))
     return {
+      sessionId: s.id,
       stock_code: s.stock_code,
       stock_name: s.stock_name,
       interval_type: s.interval_type,

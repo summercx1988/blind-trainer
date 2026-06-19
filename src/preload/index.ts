@@ -118,6 +118,11 @@ const electronAPI = {
       invoke('agent:openReportsFolder'),
   },
 
+  session: {
+    getKlineForSession: (sessionId: string): Promise<unknown> =>
+      invoke('session:getKlineForSession', { sessionId }),
+  },
+
   onTrainingLog: (callback: (event: unknown, data: { stream: string; text: string }) => void) => {
     ipcRenderer.on('training:log', callback)
   },

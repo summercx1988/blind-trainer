@@ -23,6 +23,7 @@ describe('buildMessages', () => {
   it('返回 system + user 两条消息，user 含 HabitProfile JSON', () => {
     const profile = makeHabitProfile()
     const sessions: RepresentativeSession[] = [{
+      sessionId: 's_test',
       stock_code: '600029', stock_name: '中远海控', interval_type: '1d',
       realized_pnl_pct: -7, total_trades: 5, trade_win_rate: 0.4,
       actions: [{ bar_index: 12, action_type: 'buy', price: 10.5 }],
@@ -92,6 +93,7 @@ describe('selectRepresentativeSessions', () => {
     expect(names).toContain('盈最多')
     expect(names).toContain('亏2')
     expect(names).toContain('亏1')
+    expect(result.every(r => typeof r.sessionId === 'string')).toBe(true)
   })
 
   it('跳过未结束的 session', () => {
