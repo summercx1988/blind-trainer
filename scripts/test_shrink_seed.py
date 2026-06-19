@@ -1,0 +1,92 @@
+"""shrink_seed_for_web.py 的单元测试。
+
+用临时内存库构造小样本数据，验证筛选规则正确排除 ST/低价/金融红利/新股。
+运行：python3 scripts/test_shrink_seed.py
+"""
+
+import os
+import sqlite3
+import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from shrink_seed_for_web import filter_codes, detect_new_stocks
+
+
+def build_test_db(path):
+    """构造迷你测试库：3 只正常股 + ST + 低价 + 银行 + 新股各 1 只。"""
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE stock_list (
+            code TEXT PRIMARY KEY, name TEXT, market TEXT,
+            industry TEXT, list_date TEXT, updated_at INTEGER
+        );
+        CREATE TABLE kline_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, trade_date TEXT,
+            open REAL, high REAL, low REAL, close REAL,
+            volume REAL, amount REAL, change_pct REAL,
+            UNIQUE(code, trade_date)
+        );
+        CREATE INDEX idx_daily_code_date ON kline_daily(code, trade_date);
+    """)
+    # 正常股 ×3（应被保留）；元组：(code, name, 早期K线日期, 最新K线日期, 收盘价)
+    stocks = [
+        ('600001', '测试科技', '20200101', '20240101', 15.0),  # 老股，中价
+        ('600002', '测试消费', '20190101', '20240101', 8.0),   # 老股，中低价
+        ('600003', '测试医药', '20180101', '20240101', 45.0),  # 老股，高价
+    ]
+    # 应被排除的
+    stocks += [
+        ('600099', 'ST退市', '20200101', '20240101', 5.0),     # ST
+        ('600098', '仙股', '20200101', '20240101', 1.5),       # 低价 <3
+        ('600100', '测试银行', '20190101', '20240101', 10.0),  # 银行
+        ('600200', '新股科技', '20240601', '20240601', 20.0),  # 新股（K线起点2024，早期日期也是2024）
+    ]
+    for code, name, early_date, latest_date, close in stocks:
+        conn.execute('INSERT INTO stock_list VALUES (?,?,?,?,?,0)',
+                     (code, name, 'SH', '', ''))
+        # 造 K 线：早期一条 + 最新一条（新股可能只有一条，跳过重复）
+        conn.execute('INSERT INTO kline_daily (code,trade_date,open,high,low,close,volume,amount,change_pct) '
+                     'VALUES (?,?,?,?,?,?,?,?,?)',
+                     (code, early_date, close, close, close, close, 1000, 1000*close, 0))
+        if latest_date != early_date:
+            conn.execute('INSERT INTO kline_daily (code,trade_date,open,high,low,close,volume,amount,change_pct) '
+                         'VALUES (?,?,?,?,?,?,?,?,?)',
+                         (code, latest_date, close, close, close, close, 1000, 1000*close, 0))
+    conn.commit()
+    conn.close()
+
+
+def test_filter_codes_excludes_st_lowprice_finance():
+    with tempfile.TemporaryDirectory() as td:
+        db_path = os.path.join(td, 'test.db')
+        build_test_db(db_path)
+
+        new_stocks = detect_new_stocks(db_path, '20230101')
+        codes = filter_codes(db_path, new_stocks)
+
+        assert '600001' in codes, f'正常股应保留，实际 {codes}'
+        assert '600002' in codes, f'正常股应保留，实际 {codes}'
+        assert '600003' in codes, f'正常股应保留，实际 {codes}'
+        assert '600099' not in codes, f'ST应排除，实际 {codes}'
+        assert '600098' not in codes, f'低价股应排除，实际 {codes}'
+        assert '600100' not in codes, f'银行应排除，实际 {codes}'
+        assert '600200' not in codes, f'新股应排除，实际 {codes}'
+        print(f'✓ test_filter_codes_excludes_st_lowprice_finance 通过（保留 {len(codes)} 只）')
+
+
+def test_detect_new_stocks():
+    with tempfile.TemporaryDirectory() as td:
+        db_path = os.path.join(td, 'test.db')
+        build_test_db(db_path)
+
+        new_stocks = detect_new_stocks(db_path, '20230101')
+        assert '600200' in new_stocks, f'2024上市的新股应被识别，实际 {new_stocks}'
+        assert '600001' not in new_stocks, f'老股不应被识别为新股，实际 {new_stocks}'
+        print(f'✓ test_detect_new_stocks 通过（识别 {len(new_stocks)} 只新股）')
+
+
+if __name__ == '__main__':
+    test_detect_new_stocks()
+    test_filter_codes_excludes_st_lowprice_finance()
+    print('\n全部测试通过')

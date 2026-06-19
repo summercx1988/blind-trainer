@@ -45,6 +45,62 @@ PACKS = [
 ]
 
 
+def detect_new_stocks(db_path, threshold_date):
+    """识别新股：K 线最早日期晚于 threshold_date（YYYYMMDD）的股票。
+
+    list_date 字段为空（实测 5148 只全空），改用 K 线最早日期替代。
+    返回新股 code 集合。
+    """
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute("""
+        SELECT code, MIN(trade_date) AS first_date
+        FROM kline_daily
+        GROUP BY code
+        HAVING first_date > ?
+    """, (threshold_date,)).fetchall()
+    conn.close()
+    return {code for code, _ in rows}
+
+
+def filter_codes(db_path, exclude_codes=None):
+    """筛选符合训练条件的股票 code 列表。
+
+    排除规则（design §6.6）：
+      - ST 股（name 含 ST/*ST）
+      - 低价股（最新收盘价 < 3 元）
+      - 银行/券商/保险/红利（name 匹配）
+      - 新股（由调用方传入 exclude_codes）
+    返回按 code 升序排列的列表。
+    """
+    exclude_codes = exclude_codes or set()
+    conn = sqlite3.connect(db_path)
+
+    # 取每只股票的最新收盘价（用于低价判定）
+    latest = conn.execute("""
+        SELECT code, close FROM kline_daily
+        WHERE (code, trade_date) IN (
+            SELECT code, MAX(trade_date) FROM kline_daily GROUP BY code
+        )
+    """).fetchall()
+    latest_close = {code: close for code, close in latest}
+
+    # name 筛选
+    placeholders = []
+    rows = conn.execute(f"""
+        SELECT code, name FROM stock_list WHERE {FILTER_SQL}
+    """).fetchall()
+    conn.close()
+
+    codes = []
+    for code, name in rows:
+        if code in exclude_codes:
+            continue
+        if latest_close.get(code, 999) < 3:  # 低价股排除
+            continue
+        codes.append(code)
+    return sorted(codes)
+
+
 def main():
     parser = argparse.ArgumentParser(description='为 PWA 生成精简数据包')
     parser.add_argument('--src', default=DEFAULT_SRC, help='源数据库路径')
