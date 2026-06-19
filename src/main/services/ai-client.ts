@@ -1,4 +1,5 @@
 import type { AiAdvisorConfig } from '../../types/agent'
+import { resolveEndpoint } from './endpoint-resolver'
 
 export interface LlmCallResult {
   ok: boolean
@@ -14,6 +15,7 @@ const TIMEOUT_MS = 30_000
 
 export async function callLlm(
   config: AiAdvisorConfig,
+  endpoint: string,
   messages: Array<{ role: 'system' | 'user'; content: string }>,
   timeoutMs = TIMEOUT_MS,
   maxTokens = 2048
@@ -25,7 +27,7 @@ export async function callLlm(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const res = await fetch(config.endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,6 +78,7 @@ export async function callLlm(
 }
 
 export async function testConnection(config: AiAdvisorConfig): Promise<{ ok: boolean; latencyMs: number; error: string | null }> {
-  const result = await callLlm(config, [{ role: 'user', content: 'ping' }], 10_000, 1)
+  const endpoint = resolveEndpoint(config.baseUrl)
+  const result = await callLlm(config, endpoint, [{ role: 'user', content: 'ping' }], 10_000, 1)
   return { ok: result.ok, latencyMs: result.durationMs, error: result.error }
 }

@@ -100,9 +100,9 @@ const electronAPI = {
   },
 
   agent: {
-    getConfig: (): Promise<{ endpoint: string; model: string; ready: boolean; apiKeyMasked: string }> =>
+    getConfig: (): Promise<{ baseUrl: string; model: string; ready: boolean; apiKeyMasked: string }> =>
       invoke('agent:getConfig'),
-    saveConfig: (config: { endpoint?: string; apiKey?: string; model?: string }): Promise<{ success: boolean; error?: string }> =>
+    saveConfig: (config: { baseUrl?: string; endpoint?: string; apiKey?: string; model?: string }): Promise<{ success: boolean; error?: string }> =>
       invoke('agent:saveConfig', config),
     testConnection: (): Promise<{ ok: boolean; latencyMs: number; error: string | null }> =>
       invoke('agent:testConnection'),

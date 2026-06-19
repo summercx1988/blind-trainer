@@ -6,6 +6,7 @@ import { ok, fail } from './platformResult'
 import { computeHabitIndicators } from '../services/habit-analyzer'
 import { buildMessages, parseReportResponse, selectRepresentativeSessions } from '../services/ai-advisor'
 import { callLlm, testConnection } from '../services/ai-client'
+import { resolveEndpoint, DEFAULT_BASE_URL, DEFAULT_MODEL } from '../services/endpoint-resolver'
 import { DEFAULT_HABIT_CONFIG } from '../../types/agent'
 import type {
   AiAdvisorConfig,
@@ -23,15 +24,16 @@ const readConfig = (): AiAdvisorConfig => {
   const row = getDb()
     .prepare('SELECT value_json FROM app_preferences WHERE key = ? LIMIT 1')
     .get(CONFIG_KEY) as { value_json?: string } | undefined
-  let parsed: Partial<AiAdvisorConfig> = {}
+  let parsed: Partial<AiAdvisorConfig> & { endpoint?: string } = {}
   if (row?.value_json) {
     try { parsed = JSON.parse(row.value_json) } catch { /* ignore */ }
   }
-  const endpoint = parsed.endpoint
-    || (process.env.ANTHROPIC_BASE_URL ? `${process.env.ANTHROPIC_BASE_URL}/v1/messages` : 'https://open.bigmodel.cn/api/anthropic/v1/messages')
-  const apiKey = parsed.apiKey || process.env.ANTHROPIC_AUTH_TOKEN || ''
-  const model = parsed.model || process.env.ANTHROPIC_MODEL || 'glm-4.7'
-  return { endpoint, apiKey, model, ready: Boolean(apiKey) }
+  // 兼容旧字段名 endpoint → baseUrl（老配置迁移）
+  const baseUrl = parsed.baseUrl || parsed.endpoint
+    || process.env.ANTHROPIC_BASE_URL || DEFAULT_BASE_URL
+  const apiKey = parsed.apiKey || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY || ''
+  const model = parsed.model || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL
+  return { baseUrl, apiKey, model, ready: Boolean(apiKey) }
 }
 
 interface ProfileData {
@@ -72,15 +74,19 @@ export function registerAgentIpc() {
   ipcMain.handle('agent:getConfig', async () => {
     const c = readConfig()
     const maskedKey = c.apiKey ? `****${c.apiKey.slice(-4)}` : ''
-    return { endpoint: c.endpoint, model: c.model, ready: c.ready, apiKeyMasked: maskedKey }
+    return { baseUrl: c.baseUrl, model: c.model, ready: c.ready, apiKeyMasked: maskedKey }
   })
 
-  ipcMain.handle('agent:saveConfig', async (_, payload: { endpoint?: string; apiKey?: string; model?: string }) => {
+  ipcMain.handle('agent:saveConfig', async (_, payload: { baseUrl?: string; endpoint?: string; apiKey?: string; model?: string }) => {
     try {
       const now = Math.floor(Date.now() / 1000)
       const current = readConfig()
+      // 兼容两种字段名；baseUrl 优先，其次 endpoint（老前端）
+      const baseUrl = payload.baseUrl !== undefined
+        ? payload.baseUrl
+        : (payload.endpoint !== undefined ? payload.endpoint : current.baseUrl)
       const next = {
-        endpoint: payload.endpoint || current.endpoint,
+        baseUrl,
         apiKey: payload.apiKey || current.apiKey,
         model: payload.model || current.model,
       }
@@ -156,7 +162,8 @@ export function registerAgentIpc() {
         reviews.map(r => ({ session_id: r.session_id, realized_pnl_pct: r.realized_pnl_pct, total_trades: r.total_trades, trade_win_rate: r.trade_win_rate }))
       )
       const messages = buildMessages(habitProfile, repSessions)
-      const llmResult = await callLlm(config, messages)
+      const endpoint = resolveEndpoint(config.baseUrl)
+      const llmResult = await callLlm(config, endpoint, messages)
 
       const parsed = parseReportResponse(llmResult.content)
       const reportId = `report_${Date.now()}`

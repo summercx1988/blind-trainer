@@ -132,7 +132,12 @@ export interface RepresentativeSession {
 }
 
 export interface AiAdvisorConfig {
-  endpoint: string
+  /**
+   * Base URL，不含请求路径。
+   * 例：https://api.minimaxi.com/anthropic、https://open.bigmodel.cn/api/anthropic
+   * 内部会自动拼接 /v1/messages。若用户填的是完整 URL（已含 /v1/messages）也兼容。
+   */
+  baseUrl: string
   apiKey: string
   model: string
   ready: boolean
