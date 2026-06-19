@@ -95,7 +95,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     let cancelled = false
     const loadPrefs = async () => {
       try {
-        const prefs = (await window.electronAPI?.db?.getPreference('workbench_settings_v1')) as Record<string, unknown> | null
+        const prefs = (await window.mobileAPI?.db?.getPreference('workbench_settings_v1')) as Record<string, unknown> | null
         if (cancelled || !prefs) return
         if (typeof prefs.candidateCount === 'number' && [200, 500, 1000, 2000].includes(prefs.candidateCount)) {
           setCandidateCount(prefs.candidateCount)
@@ -147,7 +147,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     targetPeriod: PeriodType,
     barsPerSymbol: number = samplePoolBarsRef.current
   ) => {
-    const raw = await window.electronAPI?.data?.getRandomSamples(targetRegime, targetPeriod, candidateCount, {
+    const raw = await window.mobileAPI?.data?.getRandomSamples(targetRegime, targetPeriod, candidateCount, {
       maxBarsPerSymbol: barsPerSymbol,
       excludeRecent: 20,
       profileId: activeProfile?.id,
@@ -160,7 +160,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const loadSamples = useCallback(async () => {
     setSampleLoading(true)
     setNotice('')
-    if (!window.electronAPI?.data?.getRandomSamples) {
+    if (!window.mobileAPI?.data?.getRandomSamples) {
       setSamples([])
       setDataReady(false)
       setNotice('数据桥接未加载成功，请重启应用后重试。')
@@ -200,7 +200,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   // 持久化热生效设置（visibleCount 等）
   useEffect(() => {
     if (!prefsLoaded) return
-    void window.electronAPI?.db?.savePreference('workbench_settings_v1', { visibleCount })
+    void window.mobileAPI?.db?.savePreference('workbench_settings_v1', { visibleCount })
   }, [visibleCount, prefsLoaded])
 
   useEffect(() => {
@@ -283,7 +283,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     const finalCapital = computeEquity(curAccount, curBar.close)
 
     try {
-      await window.electronAPI?.db?.finishSession(curSessionId, finalCapital, curAccount.realizedPnl, {
+      await window.mobileAPI?.db?.finishSession(curSessionId, finalCapital, curAccount.realizedPnl, {
         profileId: curProfile?.id,
         sampleId: curSample.id,
         stockCode: curSample.code,
@@ -293,7 +293,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         initialCapital: curInitCap
       })
     } catch (error) {
-      window.electronAPI?.log?.('error', '[WT] persistFinishedSessionSnapshot error', String(error))
+      window.mobileAPI?.log?.('error', '[WT] persistFinishedSessionSnapshot error', String(error))
     }
 
     await refreshProfileCaches()
@@ -335,7 +335,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
 
   useEffect(() => {
     if (sessionStatus === 'finished') {
-      window.electronAPI?.log?.('debug', '[WT] Render finished', {
+      window.mobileAPI?.log?.('debug', '[WT] Render finished', {
         accountEquity, sessionInitialCapital, totalPnl, totalPnlPct,
         accountCash: account.cash, accountShares: account.shares,
         currentBarClose: currentBar?.close, sessionId
@@ -351,7 +351,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const persistTradeAction = useCallback(async (trade: ExecutedTrade, barIndex: number, source = 'manual') => {
     if (!sessionId) return
 
-    await window.electronAPI?.db?.saveTradeAction({
+    await window.mobileAPI?.db?.saveTradeAction({
       sessionId,
       barIndex,
       actionType: trade.actionType,
@@ -364,7 +364,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     })
 
     if (trade.actionType === 'buy' || trade.actionType === 'sell') {
-      await window.electronAPI?.db?.saveLabel({
+      await window.mobileAPI?.db?.saveLabel({
         sessionId,
         barIndex,
         labelType: trade.actionType,
@@ -396,7 +396,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     const curProfile = activeProfileRef.current
     const curStartedAt = sessionStartedAtRef.current
 
-    window.electronAPI?.log?.('info', '[WT] finishSession enter', {
+    window.mobileAPI?.log?.('info', '[WT] finishSession enter', {
       reason, curStatus, sessionId: curSessionId,
       accountCash: curAccount.cash, accountShares: curAccount.shares,
       accountRealizedPnl: curAccount.realizedPnl,
@@ -424,14 +424,14 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
 
     const finalCapital = computeEquity(settlement.nextState, curBar.close)
     const sessionPnl = finalCapital - curInitCap
-    window.electronAPI?.log?.('info', '[WT] finishSession computed', {
+    window.mobileAPI?.log?.('info', '[WT] finishSession computed', {
       finalCapital, sessionPnl, initCap: curInitCap,
       nextCash: settlement.nextState.cash, nextShares: settlement.nextState.shares,
       nextRealizedPnl: settlement.nextState.realizedPnl
     })
 
     try {
-      const result = await window.electronAPI?.db?.finishSession(curSessionId, finalCapital, settlement.nextState.realizedPnl, {
+      const result = await window.mobileAPI?.db?.finishSession(curSessionId, finalCapital, settlement.nextState.realizedPnl, {
         profileId: curProfile?.id,
         sampleId: curSample.id,
         stockCode: curSample.code,
@@ -441,15 +441,15 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         initialCapital: curInitCap
       }) as PlatformResult<SessionFinishData> | undefined
       if (!result?.success) {
-        window.electronAPI?.log?.('error', '[WT] finishSession IPC failed', getPlatformErrorMessage(result, '训练会话保存失败'))
+        window.mobileAPI?.log?.('error', '[WT] finishSession IPC failed', getPlatformErrorMessage(result, '训练会话保存失败'))
       } else {
-        window.electronAPI?.log?.('info', '[WT] finishSession IPC success')
+        window.mobileAPI?.log?.('info', '[WT] finishSession IPC success')
       }
     } catch (err) {
-      window.electronAPI?.log?.('error', '[WT] finishSession IPC error', String(err))
+      window.mobileAPI?.log?.('error', '[WT] finishSession IPC error', String(err))
     }
 
-    const review = await window.electronAPI?.db?.getSessionReview(curSessionId)
+    const review = await window.mobileAPI?.db?.getSessionReview(curSessionId) as SessionReview | null | undefined
     setSessionReview(review || null)
 
     await refreshProfileCaches()
@@ -492,7 +492,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   }, [finishSession, persistFinishedSessionSnapshot])
 
   const extendActiveSample = useCallback(async (): Promise<SampleExtensionResult> => {
-    if (!activeSample || extendingSample || !window.electronAPI?.data?.getCandles) {
+    if (!activeSample || extendingSample || !window.mobileAPI?.data?.getCandles) {
       return { loaded: false, currentIndex: currentBarIndex, newLength: activeSample?.klines.length || 0 }
     }
 
@@ -501,7 +501,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       const currentTimestamp = activeSample.klines[currentBarIndex]?.timestamp || 0
       const anchorTimestamp = activeSample.klines[Math.min(activeSample.warmupBars, activeSample.klines.length - 1)]?.timestamp || currentTimestamp
 
-      const rawCandles = await window.electronAPI.data.getCandles(activeSample.code, activeSample.period as PeriodType)
+      const rawCandles = await window.mobileAPI.data.getCandles(activeSample.code, activeSample.period as PeriodType)
       const allBars = (Array.isArray(rawCandles) ? rawCandles : [])
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
         .map((item) => normalizeBar(item))
@@ -592,7 +592,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     let resolvedSessionId = `session_local_${Date.now()}`
     if (overrideCapital == null) {
       try {
-        const freshProfile = await window.electronAPI?.profile?.getActive()
+        const freshProfile = await window.mobileAPI?.profile?.getActive()
         if (freshProfile) {
           const freshCapital = Number((freshProfile as Record<string, unknown>).current_capital || 0)
           if (freshCapital > 0) capital = freshCapital
@@ -600,7 +600,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       } catch { /* use existing */ }
     }
     try {
-      const saved = await window.electronAPI?.db?.saveSession({
+      const saved = await window.mobileAPI?.db?.saveSession({
         sampleId: sample.id,
         stockCode: sample.code,
         stockName: sample.name,
@@ -610,12 +610,12 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         profileId: currentProfile?.id
       })
       if (!saved || ((saved as unknown as Record<string, unknown>)?.error)) {
-        window.electronAPI?.log?.('error', '[WT] saveSession failed', String((saved as unknown as Record<string, unknown>)?.error || 'unknown'))
+        window.mobileAPI?.log?.('error', '[WT] saveSession failed', String((saved as unknown as Record<string, unknown>)?.error || 'unknown'))
         setNotice(`⚠ 保存会话失败: ${(saved as unknown as Record<string, unknown>)?.error || '未知错误'}`)
       }
       resolvedSessionId = (saved as SaveSessionResult | undefined)?.id || `session_local_${Date.now()}`
     } catch (err) {
-      window.electronAPI?.log?.('error', '[WT] saveSession exception', String(err))
+      window.mobileAPI?.log?.('error', '[WT] saveSession exception', String(err))
       resolvedSessionId = `session_local_${Date.now()}`
       setNotice(`⚠ 保存会话异常: ${String(err)}`)
     }
@@ -741,7 +741,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         await persistTradeAction(execution.trade, executionBarIndex)
       } catch (persistError) {
         console.error('持久化交易动作失败:', persistError)
-        window.electronAPI?.log?.('error', '[WT] persistTradeAction failed', { error: String(persistError) })
+        window.mobileAPI?.log?.('error', '[WT] persistTradeAction failed', { error: String(persistError) })
       }
 
       if (actionType === 'skip') {
@@ -754,7 +754,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       }
     } catch (error) {
       console.error('执行动作失败:', error)
-      window.electronAPI?.log?.('error', '[WT] runAction failed', { error: String(error) })
+      window.mobileAPI?.log?.('error', '[WT] runAction failed', { error: String(error) })
       setActionError('动作提交失败，请重试。')
     } finally {
       setActionPending(false)
@@ -814,7 +814,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       }
 
       try {
-        await window.electronAPI?.db?.finishSession(curSessionId, finalCapital, settlement.nextState.realizedPnl, {
+        await window.mobileAPI?.db?.finishSession(curSessionId, finalCapital, settlement.nextState.realizedPnl, {
           profileId: curProfile?.id,
           sampleId: curSample.id,
           stockCode: curSample.code,
@@ -824,7 +824,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
           initialCapital: curInitCap
         })
       } catch (err) {
-        window.electronAPI?.log?.('error', '[WT] handleSwitchSample finishSession error', String(err))
+        window.mobileAPI?.log?.('error', '[WT] handleSwitchSample finishSession error', String(err))
       }
       void refreshProfileCaches()
       nextCapital = finalCapital
@@ -854,7 +854,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         const sample = normalized[idx]
         const safeWarmup = Math.max(10, Math.min(sample.warmupBars, sample.klines.length - 2))
         const startedAt = Date.now()
-        const saved = await window.electronAPI?.db?.saveSession({
+        const saved = await window.mobileAPI?.db?.saveSession({
           sampleId: sample.id,
           stockCode: sample.code,
           stockName: sample.name,
@@ -933,7 +933,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
     setVisibleCount(DEFAULT_WORKBENCH_SETTINGS.visibleCount)
     setSamplePoolBars(520)
     samplePoolBarsRef.current = 520
-    void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
+    void window.mobileAPI?.db?.savePreference('workbench_settings_v1', {
       regime: DEFAULT_WORKBENCH_SETTINGS.regime,
       continuousMode: DEFAULT_WORKBENCH_SETTINGS.continuousMode,
       executionMode: DEFAULT_WORKBENCH_SETTINGS.executionMode,
@@ -966,11 +966,11 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       const settlement = settleAtSessionEnd(acc, bar.close, DEFAULT_TRADING_CONFIG)
       const finalCapital = computeEquity(settlement.nextState, bar.close)
 
-      window.electronAPI?.log?.('info', '[WT] unmount auto-save', { sid, finalCapital, initCap, accountCash: acc.cash })
+      window.mobileAPI?.log?.('info', '[WT] unmount auto-save', { sid, finalCapital, initCap, accountCash: acc.cash })
 
       void (async () => {
         try {
-          await window.electronAPI?.db?.finishSession(sid, finalCapital, settlement.nextState.realizedPnl, {
+          await window.mobileAPI?.db?.finishSession(sid, finalCapital, settlement.nextState.realizedPnl, {
             profileId: profile?.id,
             sampleId: sample.id,
             stockCode: sample.code,
@@ -980,7 +980,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
             initialCapital: initCap
           })
         } catch (error) {
-          window.electronAPI?.log?.('error', '[WT] unmount finishSession error', String(error))
+          window.mobileAPI?.log?.('error', '[WT] unmount finishSession error', String(error))
         } finally {
           const store = usePlatformStore.getState()
           await Promise.allSettled([
@@ -1138,7 +1138,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
               setPositionRatio(settings.positionRatio)
               positionRatioRef.current = settings.positionRatio
               // 持久化训练配置（退出后下次进入仍生效）
-              void window.electronAPI?.db?.savePreference('workbench_settings_v1', {
+              void window.mobileAPI?.db?.savePreference('workbench_settings_v1', {
                 candidateCount: settings.candidateCount,
                 minPrice: settings.minPrice,
                 samplePoolBars: settings.samplePoolBars,

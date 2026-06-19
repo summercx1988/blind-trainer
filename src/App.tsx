@@ -1,8 +1,5 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useMemo, useRef, useState } from 'react'
 import InfoHover from './components/common/InfoHover'
-import { initDb, queryStockList, queryKline, isDbReady } from './web/dbLoader'
-import { initBlindDb } from './web/blindDb'
-import { getRandomSamples } from './web/sampler'
 import './App.css'
 
 const BlindTrainingWorkbench = lazy(() => import('./components/trading/BlindTrainingWorkbench'))
@@ -117,60 +114,6 @@ const renderModule = (
   )
 }
 
-function DataProbe() {
-  const [status, setStatus] = useState('未初始化')
-  const [stocks, setStocks] = useState<Array<Record<string, unknown>>>([])
-  const [klines, setKlines] = useState<Array<Record<string, unknown>>>([])
-  const [sample, setSample] = useState<{ code?: string; name?: string; barCount?: number }>({})
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        setStatus('初始化行情库…')
-        await initDb()
-        setStatus('初始化盲训库…')
-        await initBlindDb()
-        setStatus('查询股票列表…')
-        const s = await queryStockList(5)
-        setStocks(s)
-        if (s.length > 0) {
-          const k = await queryKline(s[0].code as string, 'daily', 5)
-          setKlines(k)
-        }
-        setStatus('抽签（零重复）…')
-        const samples = await getRandomSamples('mixed', 1, {
-          maxBarsPerSymbol: 260,
-          profileId: 'default',
-        })
-        if (samples.length > 0) {
-          setSample({
-            code: samples[0].code,
-            name: samples[0].name,
-            barCount: samples[0].klines.length,
-          })
-        }
-        setStatus(`✅ 就绪（${s.length} 股票 + 抽到 ${sample.code || '无'}）`)
-      } catch (e) {
-        setStatus(`❌ ${e instanceof Error ? e.message : String(e)}`)
-      }
-    })()
-  }, [])
-
-  return (
-    <div style={{ padding: 16, background: '#0d0d0d', color: '#fff', fontFamily: 'monospace', minHeight: '100vh' }}>
-      <h2 style={{ fontSize: 16 }}>数据探针 · PWA 阶段2b 验证</h2>
-      <p style={{ fontSize: 13 }}>DB 状态：{status}</p>
-      <p style={{ fontSize: 13 }}>isDbReady: {String(isDbReady())}</p>
-      <h3 style={{ fontSize: 14, marginTop: 16 }}>股票列表（前5）</h3>
-      <pre style={{ fontSize: 11, overflowX: 'auto' }}>{JSON.stringify(stocks, null, 2)}</pre>
-      <h3 style={{ fontSize: 14, marginTop: 16 }}>第一只股票最近5根K线</h3>
-      <pre style={{ fontSize: 11, overflowX: 'auto' }}>{JSON.stringify(klines, null, 2)}</pre>
-      <h3 style={{ fontSize: 14, marginTop: 16 }}>零重复抽签结果</h3>
-      <pre style={{ fontSize: 11, overflowX: 'auto' }}>{JSON.stringify(sample, null, 2)}</pre>
-    </div>
-  )
-}
-
 function App() {
   const [activeModule, setActiveModule] = useState<AppModule>('overview')
   const [autoStartBlind, setAutoStartBlind] = useState(false)
@@ -214,10 +157,6 @@ function App() {
     [activeModule, handleNavigate, handleStartTraining, autoStartBlind]
   )
   /* eslint-enable react-hooks/refs */
-
-  if (typeof window !== 'undefined' && !(window as unknown as { electronAPI?: unknown }).electronAPI) {
-    return <DataProbe />
-  }
 
   return (
     <div className="app-shell">

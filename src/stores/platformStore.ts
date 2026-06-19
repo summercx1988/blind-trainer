@@ -84,7 +84,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   fetchDataStats: async () => {
     try {
-      const stats = await window.electronAPI?.data?.getStats()
+      const stats = await window.mobileAPI?.data?.getStats() as DataStats | null | undefined
       set({ dataStats: stats ?? null, dataStatsLoaded: true })
     } catch {
       set({ dataStats: null, dataStatsLoaded: true })
@@ -93,7 +93,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   fetchSessionList: async () => {
     try {
-      const sessions = await window.electronAPI?.db?.listSessions()
+      const sessions = await window.mobileAPI?.db?.listSessions() as SessionSummary[] | null | undefined
       set({ sessionList: sessions || [], sessionListLoaded: true })
     } catch (error) {
       console.error('[platformStore] fetchSessionList failed:', error)
@@ -103,7 +103,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   fetchStockList: async (limit = 200) => {
     try {
-      const rows = await window.electronAPI?.data?.getStockList(limit)
+      const rows = await window.mobileAPI?.data?.getStockList(limit) as UnknownRecord[] | null | undefined
       const stocks = (rows || [])
         .map((row) => toStockOption(row as UnknownRecord))
         .filter((row): row is StockOption => row !== null)
@@ -130,7 +130,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   fetchActiveProfile: async () => {
     try {
-      const raw = await window.electronAPI?.profile?.getActive()
+      const raw = await window.mobileAPI?.profile?.getActive()
       const profile = raw ? toTrainingProfile(raw as UnknownRecord) : null
       set({ activeProfile: profile, activeProfileLoaded: true })
     } catch (error) {
@@ -141,7 +141,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   fetchProfileList: async () => {
     try {
-      const rows = await window.electronAPI?.profile?.list()
+      const rows = await window.mobileAPI?.profile?.list() as UnknownRecord[] | null | undefined
       const profiles = (rows || [])
         .map((row) => toTrainingProfile(row as UnknownRecord))
         .filter((p): p is TrainingProfile => p !== null)
@@ -164,7 +164,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   switchProfile: async (profileId: string) => {
     try {
-      await window.electronAPI?.profile?.load(profileId)
+      await window.mobileAPI?.profile?.load(profileId)
       await Promise.all([
         get().fetchActiveProfile(),
         get().fetchProfileList(),
@@ -178,7 +178,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   createProfile: async (name: string, capital: number) => {
     try {
-      await window.electronAPI?.profile?.create(name, capital)
+      await window.mobileAPI?.profile?.create(name, capital)
       await Promise.all([
         get().fetchActiveProfile(),
         get().fetchProfileList(),
@@ -192,7 +192,7 @@ export const usePlatformStore = create<PlatformState & PlatformActions>((set, ge
 
   deleteProfile: async (profileId: string) => {
     try {
-      const result = await window.electronAPI?.profile?.delete(profileId)
+      const result = await window.mobileAPI?.profile?.delete(profileId)
       if (result && typeof result === 'object' && 'success' in result && result.success) {
         const state = get()
         await Promise.all([

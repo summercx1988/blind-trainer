@@ -99,6 +99,17 @@ declare global {
 
       log?: (level: string, message: string, data?: unknown) => void
     }
+    mobileAPI?: {
+      init: () => Promise<void>
+      isReady: () => boolean
+      db: Record<string, (...args: unknown[]) => Promise<unknown>>
+      profile: Record<string, (...args: unknown[]) => Promise<unknown>>
+      data: Record<string, (...args: unknown[]) => Promise<unknown>>
+      agent: Record<string, (...args: unknown[]) => Promise<unknown>>
+      log: (level: string, message: string, data?: unknown) => void
+      onTrainingLog: (cb: unknown) => void
+      removeTrainingLogListener: (cb: unknown) => void
+    }
   }
 }
 
