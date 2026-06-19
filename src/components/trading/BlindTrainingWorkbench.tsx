@@ -28,6 +28,7 @@ import { DEFAULT_POSITION_RATIO } from './blind-workbench/constants'
 import AccountOverview from './blind-workbench/AccountOverview'
 import ActionSection from './blind-workbench/ActionSection'
 import ActionLog from './blind-workbench/ActionLog'
+import type { BuyRatio } from './blind-workbench/ActionSection'
 import ResultSummary from './blind-workbench/ResultSummary'
 import InfoHover from '../common/InfoHover'
 import { UserIcon, ChartBarIcon } from '../common/Icons'
@@ -85,6 +86,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
   const [candidateCount, setCandidateCount] = useState(500)
   const [samplePoolBars, setSamplePoolBars] = useState(520)
   const [positionRatio, setPositionRatio] = useState(DEFAULT_POSITION_RATIO)
+  const [buyRatio, setBuyRatio] = useState<BuyRatio>(0.5)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const prefsLoadedRef = useRef(false)
   const samplePoolBarsRef = useRef(520)
@@ -709,7 +711,8 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
         executionBarIndex = targetIndex
       }
 
-      const execution = evaluateManualAction(account, actionType, executionPrice, DEFAULT_TRADING_CONFIG)
+      const overrideBuyAmount = actionType === 'buy' ? account.cash * buyRatio : undefined
+      const execution = evaluateManualAction(account, actionType, executionPrice, DEFAULT_TRADING_CONFIG, overrideBuyAmount)
       if (!execution.ok) {
         setActionError(execution.error)
         return
@@ -761,7 +764,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
       setActionPending(false)
     }
   }, [
-    sessionStatus, activeSample, currentBar, actionPending, account,
+    sessionStatus, activeSample, currentBar, actionPending, account, buyRatio,
     appendActionLog, currentBarIndex, persistTradeAction,
     finishSession, stepForward, executionMode, extendActiveSample
   ])
@@ -1180,6 +1183,10 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 actionPending={actionPending}
                 accountShares={account.shares}
                 actionError={actionError}
+                availableCash={account.cash}
+                currentPrice={currentBar?.close || 0}
+                selectedRatio={buyRatio}
+                onSelectRatio={setBuyRatio}
                 onActionClick={handleActionClick}
                 onNextBar={() => void handleStepForward()}
                 onSwitchSample={() => void handleSwitchSample()}
