@@ -2042,7 +2042,8 @@
   }
   /* 动作按钮区固定底部（拇指触达区） */
   .wt-action-area,
-  .wt-action-buttons {
+  .wt-action-buttons,
+  .wt-action-section {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -2052,13 +2053,18 @@
     padding: 10px;
     z-index: 100;
     display: flex;
+    flex-direction: column;
     gap: 8px;
   }
   .wt-action-area button,
-  .wt-action-buttons button {
+  .wt-action-buttons button,
+  .wt-action-section .wt-btn {
     flex: 1;
     padding: 14px 0;
     font-size: 14px;
+  }
+  .wt-action-section .wt-shares-presets {
+    margin-bottom: 0;
   }
 }
 
@@ -2077,7 +2083,8 @@
   /* 右侧固定操作面板（账户+日志+买卖） */
   .wt-profile-bar,
   .wt-action-area,
-  .wt-action-buttons {
+  .wt-action-buttons,
+  .wt-action-section {
     flex: 0 0 160px;
   }
   .wt-profile-bar {
