@@ -41,15 +41,15 @@ export default function AIHabitAdvisor() {
   const [reportError, setReportError] = useState<string | null>(null)
 
   const loadInit = useCallback(async () => {
-    const active = await window.electronAPI?.profile?.getActive() as { id?: string } | undefined
+    const active = await window.mobileAPI?.profile?.getActive() as { id?: string } | undefined
     if (active?.id) setProfileId(active.id)
-    const cfg = await window.electronAPI?.agent?.getConfig()
+    const cfg = await window.mobileAPI?.agent?.getConfig() as { ready?: boolean } | undefined
     setConfigReady(Boolean(cfg?.ready))
-    const hist = unwrap<HabitProfileRecord[]>(await window.electronAPI?.agent?.getHabitHistory(active?.id ?? 'default', 10)) ?? []
+    const hist = unwrap<HabitProfileRecord[]>(await window.mobileAPI?.agent?.getHabitHistory(active?.id ?? 'default', 10)) ?? []
     setHistory(hist)
     if (hist.length > 0) {
       setHabit(hist[0])
-      const reports = unwrap<ReportRecord[]>(await window.electronAPI?.agent?.listReports(active?.id ?? 'default', 1)) ?? []
+      const reports = unwrap<ReportRecord[]>(await window.mobileAPI?.agent?.listReports(active?.id ?? 'default', 1)) ?? []
       if (reports.length > 0 && !reports[0].error) setReport(reports[0])
     }
   }, [])
@@ -60,11 +60,11 @@ export default function AIHabitAdvisor() {
     setLoadingHabit(true)
     setError(null)
     try {
-      const r = await window.electronAPI?.agent?.analyzeHabits(profileId)
+      const r = await window.mobileAPI?.agent?.analyzeHabits(profileId)
       const data = unwrap<HabitProfileRecord>(r)
       if (data) {
         setHabit(data)
-        const hist = unwrap<HabitProfileRecord[]>(await window.electronAPI?.agent?.getHabitHistory(profileId, 10)) ?? []
+        const hist = unwrap<HabitProfileRecord[]>(await window.mobileAPI?.agent?.getHabitHistory(profileId, 10)) ?? []
         setHistory(hist)
       } else {
         setError((r as { error?: { message?: string } })?.error?.message ?? '分析失败')
@@ -79,7 +79,7 @@ export default function AIHabitAdvisor() {
     setLoadingReport(true)
     setReportError(null)
     try {
-      const r = await window.electronAPI?.agent?.generateReport({
+      const r = await window.mobileAPI?.agent?.generateReport({
         profileId,
         habitProfileId: habit.id,
         force,
