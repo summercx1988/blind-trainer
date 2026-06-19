@@ -220,7 +220,30 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     print(f'源库：{args.src}')
     print(f'输出：{args.out}')
-    print('（骨架已就绪，筛选与导出逻辑在后续 task 实现）')
+
+    # 1. 识别新股
+    print('\n[1/3] 识别新股（K线最早日期 > {}）...'.format(NEW_STOCK_DATE_THRESHOLD))
+    new_stocks = detect_new_stocks(args.src, NEW_STOCK_DATE_THRESHOLD)
+    print(f'  识别新股 {len(new_stocks)} 只')
+
+    # 2. 筛选全集
+    print('\n[2/3] 筛选符合训练条件的股票 ...')
+    all_codes = filter_codes(args.src, new_stocks)
+    print(f'  筛选后保留 {len(all_codes)} 只（排除 ST/低价/金融/新股）')
+
+    # 3. 生成分层包
+    print('\n[3/3] 生成分层数据包 ...')
+    for pack in PACKS:
+        # full-ALL 的 size 字段是 None（全量），其他取实际数值
+        size = pack['size'] if pack['name'] != 'full-ALL' else len(all_codes)
+        # 实际包名带上股票数，便于 PWA 端识别
+        actual_name = pack['name'] if pack['name'] != 'full-ALL' else f'full-{len(all_codes)}'
+        codes = select_packs(all_codes, args.src, size=min(size, len(all_codes)), sort=pack['sort'])
+        pack_path = export_pack(args.src, args.out, actual_name, codes)
+        size_mb = os.path.getsize(pack_path) / 1024 / 1024
+        print(f'  ✓ {pack["desc"]} → {actual_name}.sqlite（{len(codes)}只，{size_mb:.1f}MB）')
+
+    print('\n完成。所有数据包位于：', args.out)
 
 
 if __name__ == '__main__':
