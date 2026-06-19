@@ -101,6 +101,41 @@ def filter_codes(db_path, exclude_codes=None):
     return sorted(codes)
 
 
+def select_packs(all_codes, db_path, size=None, sort=None):
+    """从筛选全集中选取一个分层包。
+
+    Args:
+        all_codes: filter_codes() 返回的筛选全集
+        db_path: 源库路径（用于查活跃度）
+        size: None 表示全量；数字表示截断到前 N 只
+        sort: 'activity' 按近一年日均成交额降序；None 不排序（按 all_codes 原序）
+    返回 code 列表。
+    """
+    if sort == 'activity':
+        conn = sqlite3.connect(db_path)
+        # 近一年日均成交额（amount 越大越活跃）
+        placeholders = ','.join('?' * len(all_codes))
+        rows = conn.execute(f"""
+            SELECT code, AVG(amount) AS avg_amount
+            FROM kline_daily
+            WHERE code IN ({placeholders})
+              AND trade_date >= strftime('%Y%m%d', 'now', '-1 year')
+            GROUP BY code
+            ORDER BY avg_amount DESC
+        """, all_codes).fetchall()
+        conn.close()
+        sorted_codes = [code for code, _ in rows]
+        # 补上近一年无数据的老股（按原序追加到末尾）
+        rest = [c for c in all_codes if c not in set(sorted_codes)]
+        sorted_codes = sorted_codes + rest
+    else:
+        sorted_codes = list(all_codes)
+
+    if size is None:
+        return sorted_codes
+    return sorted_codes[:size]
+
+
 def main():
     parser = argparse.ArgumentParser(description='为 PWA 生成精简数据包')
     parser.add_argument('--src', default=DEFAULT_SRC, help='源数据库路径')
