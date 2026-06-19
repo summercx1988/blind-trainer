@@ -1,7 +1,27 @@
 import { initDb } from './dbLoader'
-import { initBlindDb, saveSession as blindSaveSession } from './blindDb'
+import {
+  initBlindDb,
+  saveSession as blindSaveSession,
+  finishSession as blindFinishSession,
+  saveTradeAction as blindSaveTradeAction,
+  getSessionActions as blindGetSessionActions,
+  getSessionReview as blindGetSessionReview,
+  listSessions as blindListSessions,
+  listProfiles as blindListProfiles,
+  getActiveProfile as blindGetActiveProfile,
+  createProfile as blindCreateProfile,
+  loadProfile as blindLoadProfile,
+  deleteProfile as blindDeleteProfile,
+  resetProfileCapital as blindResetProfileCapital,
+  getProfileStats as blindGetProfileStats,
+} from './blindDb'
 import { getRandomSamples as samplerGetRandomSamples } from './sampler'
 import { adaptSampleForWorkbench } from './sampleAdapter'
+import type {
+  PlatformResult,
+  SessionFinishData,
+  ProfileDeleteData,
+} from '../types/ipc'
 
 export interface WebApiInitOptions {
   packData?: Uint8Array
@@ -10,18 +30,6 @@ export interface WebApiInitOptions {
 }
 
 const prefsStore = new Map<string, unknown>()
-
-const DEFAULT_PROFILE = {
-  id: 'default',
-  name: '默认账户',
-  current_capital: 100000,
-  initial_capital: 100000,
-  total_pnl: 0,
-  total_sessions: 0,
-  total_wins: 0,
-  status: 'active',
-  created_at: Date.now(),
-}
 
 export function createWebApi(initOptions: WebApiInitOptions = {}) {
   let initialized = false
@@ -37,7 +45,11 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
     isReady: () => initialized,
 
     db: {
-      getStatistics: async () => ({ totalSessions: 0, totalLabels: 0, winRate: 0 }),
+      getStatistics: async () => {
+        const sessions = await blindListSessions()
+        const totalSessions = sessions.length
+        return { totalSessions, totalLabels: 0, winRate: 0 }
+      },
 
       saveSession: async (session: {
         sampleId: string
@@ -64,16 +76,34 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
       },
 
       finishSession: async (
-        _sessionId: string,
+        sessionId: string,
         finalCapital: number,
         realizedPnl: number,
-        _context?: unknown
-      ) => {
-        return {
-          success: true,
-          data: { sessionId: _sessionId, finishedAt: Date.now(), finalCapital, realizedPnl },
-          error: null,
-          code: null,
+        context?: Record<string, unknown>
+      ): Promise<PlatformResult<SessionFinishData>> => {
+        try {
+          const result = await blindFinishSession(sessionId, finalCapital, realizedPnl, context as never)
+          if (!result.success) {
+            return {
+              success: false,
+              data: null,
+              error: { message: '训练会话不存在', details: { sessionId } },
+              code: 'SESSION_NOT_FOUND',
+            }
+          }
+          return {
+            success: true,
+            data: { sessionId, finishedAt: Date.now(), finalCapital, realizedPnl },
+            error: null,
+            code: null,
+          }
+        } catch (err) {
+          return {
+            success: false,
+            data: null,
+            error: { message: String(err) },
+            code: 'FINISH_SESSION_ERROR',
+          }
         }
       },
 
@@ -88,7 +118,17 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
         realizedPnl?: number
         source?: string
       }) => {
-        return { id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, ...action }
+        return blindSaveTradeAction({
+          sessionId: action.sessionId,
+          barIndex: action.barIndex,
+          actionType: action.actionType as 'buy' | 'sell' | 'hold' | 'skip',
+          price: action.price,
+          shares: action.shares,
+          amount: action.amount,
+          commission: action.commission,
+          realizedPnl: action.realizedPnl,
+          source: action.source,
+        })
       },
 
       saveLabel: async (label: unknown) => {
@@ -100,10 +140,10 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
       },
 
       getSessionLabels: async (_sessionId: string) => [],
-      getSessionActions: async (_sessionId: string) => [],
-      getSessionReview: async (_sessionId: string) => null,
+      getSessionActions: async (sessionId: string) => blindGetSessionActions(sessionId),
+      getSessionReview: async (sessionId: string) => blindGetSessionReview(sessionId),
       exportLabelsCSV: async (_sessionId: string) => '',
-      listSessions: async () => [],
+      listSessions: async (profileId?: string) => blindListSessions(profileId),
 
       getPreference: async (key: string) => (prefsStore.has(key) ? prefsStore.get(key) : null),
       savePreference: async (key: string, value: unknown) => {
@@ -113,21 +153,25 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
     },
 
     profile: {
-      list: async () => [DEFAULT_PROFILE],
-      getActive: async () => DEFAULT_PROFILE,
-      create: async (name: string, initialCapital: number) => ({
-        ...DEFAULT_PROFILE,
-        name,
-        current_capital: initialCapital,
-        initial_capital: initialCapital,
-      }),
-      load: async (_profileId: string) => DEFAULT_PROFILE,
-      delete: async (profileId: string) => ({ success: true, data: { profileId }, error: null, code: null }),
-      resetCapital: async (profileId: string, newCapital: number) => ({
-        ...DEFAULT_PROFILE,
-        id: profileId,
-        current_capital: newCapital,
-      }),
+      list: async () => blindListProfiles(),
+      getActive: async () => blindGetActiveProfile(),
+      create: async (name: string, initialCapital: number) => blindCreateProfile(name, initialCapital),
+      load: async (profileId: string) => blindLoadProfile(profileId),
+      delete: async (profileId: string): Promise<PlatformResult<ProfileDeleteData>> => {
+        const result = await blindDeleteProfile(profileId)
+        if (result.success) {
+          return { success: true, data: { profileId }, error: null, code: null }
+        }
+        return {
+          success: false,
+          data: null,
+          error: { message: result.error || '删除失败' },
+          code: 'PROFILE_DELETE_ERROR',
+        }
+      },
+      resetCapital: async (profileId: string, newCapital: number) =>
+        blindResetProfileCapital(profileId, newCapital),
+      getStats: async (profileId?: string) => blindGetProfileStats(profileId),
     },
 
     data: {
@@ -159,7 +203,10 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
         const { queryKline } = await import('./dbLoader')
         return queryKline(code, 'daily', limit)
       },
-      getCandles: async (_code: string, _interval: string) => [],
+      getCandles: async (code: string, _interval: string) => {
+        const { queryKline } = await import('./dbLoader')
+        return queryKline(code, 'daily', 99999)
+      },
       getStats: async () => ({ stockCount: 0, dailyCount: 0, m15Count: 0, m5Count: 0 }),
       init: async () => ({ success: true, data: { stockList: null, dailySynced: 0, dailyFailed: 0 }, error: null, code: null }),
       sync: async () => ({ success: true, data: null, error: null, code: null }),

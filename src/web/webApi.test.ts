@@ -52,9 +52,9 @@ describe('webApi 抽象层', () => {
     expect(typeof result.id).toBe('string')
   })
 
-  it('db.finishSession 返回 success:true', async () => {
-    const result = await api.db.finishSession('sess-test', 100000, 0, {}) as { success: boolean }
-    expect(result.success).toBe(true)
+  it('db.finishSession 对不存在的 session 返回 success:false', async () => {
+    const result = await api.db.finishSession('sess-nonexistent', 100000, 0, {}) as { success: boolean }
+    expect(result.success).toBe(false)
   })
 
   it('db.getPreference 未设置时返回 null', async () => {
@@ -70,5 +70,125 @@ describe('webApi 抽象层', () => {
 
   it('log 是 no-op（不抛错）', () => {
     expect(() => api.log('info', 'test message', { a: 1 })).not.toThrow()
+  })
+})
+
+describe('webApi 端到端集成（训练→结算→复盘）', () => {
+  it('完整训练流程：saveSession → saveTradeAction → finishSession → getSessionReview', async () => {
+    const created = await api.profile.create('E2E测试账户', 100000)
+    const profileId = created.id
+    expect(profileId).toBeTruthy()
+    expect(created.current_capital).toBe(100000)
+
+    const session = await api.db.saveSession({
+      sampleId: 'smp-e2e-1',
+      stockCode: '600001',
+      stockName: '测试科技',
+      intervalType: '1d',
+      startedAt: Date.now(),
+      initialCapital: 100000,
+      profileId,
+    }) as { id: string }
+
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 0, actionType: 'buy', price: 10, shares: 100, amount: 1000 })
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 5, actionType: 'sell', price: 15, shares: 100, amount: 1500, realizedPnl: 500 })
+
+    const finishResult = await api.db.finishSession(session.id, 100500, 500, { profileId }) as { success: boolean }
+    expect(finishResult.success).toBe(true)
+
+    const review = await api.db.getSessionReview(session.id) as {
+      realized_pnl: number
+      total_trades: number
+      trade_win_rate: number
+      avg_holding_bars: number
+      buy_count: number
+      sell_count: number
+    } | null
+    expect(review).not.toBeNull()
+    expect(review!.realized_pnl).toBe(500)
+    expect(review!.total_trades).toBe(2)
+    expect(review!.trade_win_rate).toBe(1)
+    expect(review!.avg_holding_bars).toBe(5)
+    expect(review!.buy_count).toBe(1)
+    expect(review!.sell_count).toBe(1)
+
+    const actions = await api.db.getSessionActions(session.id) as Array<{ action_type: string }>
+    expect(actions).toHaveLength(2)
+    expect(actions[0].action_type).toBe('buy')
+    expect(actions[1].action_type).toBe('sell')
+
+    const sessions = await api.db.listSessions(profileId) as Array<{ id: string; realized_pnl: number; status: string }>
+    const me = sessions.find((s) => s.id === session.id)
+    expect(me).toBeTruthy()
+    expect(me!.realized_pnl).toBe(500)
+    expect(me!.status).toBe('finished')
+  })
+
+  it('finishSession 后 profile 资金反映结果', async () => {
+    const created = await api.profile.create('E2E资金测试', 50000)
+    const profileId = created.id
+
+    const session = await api.db.saveSession({
+      sampleId: 'smp-e2e-2',
+      stockCode: '000002',
+      stockName: '测试B',
+      intervalType: '1d',
+      startedAt: Date.now(),
+      initialCapital: 50000,
+      profileId,
+    }) as { id: string }
+
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 0, actionType: 'buy', price: 20, shares: 100, amount: 2000 })
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 4, actionType: 'sell', price: 25, shares: 100, amount: 2500, realizedPnl: 500 })
+
+    await api.db.finishSession(session.id, 50500, 500, { profileId })
+
+    const profile = await api.profile.getActive() as { id: string; current_capital: number; total_pnl: number; total_sessions: number }
+    expect(profile.id).toBe(profileId)
+    expect(profile.current_capital).toBe(50500)
+    expect(profile.total_pnl).toBe(500)
+    expect(profile.total_sessions).toBe(1)
+  })
+
+  it('profile.list 包含新建账户，profile.delete 拒绝 default', async () => {
+    const before = await api.profile.list() as Array<{ id: string; name: string }>
+    expect(before.some((p) => p.id === 'default')).toBe(true)
+
+    const deleteDefault = await api.profile.delete('default') as { success: boolean }
+    expect(deleteDefault.success).toBe(false)
+
+    const after = await api.profile.list() as Array<{ id: string }>
+    expect(after.some((p) => p.id === 'default')).toBe(true)
+  })
+
+  it('profile.resetCapital 重置后 total_sessions 归零', async () => {
+    const created = await api.profile.create('重置测试', 80000)
+    const profileId = created.id
+
+    const session = await api.db.saveSession({
+      sampleId: 'smp-reset',
+      stockCode: '000003',
+      stockName: '测试C',
+      intervalType: '1d',
+      startedAt: Date.now(),
+      initialCapital: 80000,
+      profileId,
+    }) as { id: string }
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 0, actionType: 'buy', price: 10, shares: 100 })
+    await api.db.saveTradeAction({ sessionId: session.id, barIndex: 2, actionType: 'sell', price: 11, shares: 100, realizedPnl: 100 })
+    await api.db.finishSession(session.id, 80100, 100, { profileId })
+
+    await api.profile.resetCapital(profileId, 200000)
+    const profiles = await api.profile.list() as Array<{ id: string; current_capital: number; total_sessions: number }>
+    const me = profiles.find((p) => p.id === profileId)!
+    expect(me.current_capital).toBe(200000)
+    expect(me.total_sessions).toBe(0)
+  })
+
+  it('data.getCandles 返回该股 K 线', async () => {
+    const candles = await api.data.getCandles('000021', '1d') as Array<{ close: number }>
+    expect(Array.isArray(candles)).toBe(true)
+    expect(candles.length).toBeGreaterThan(0)
+    expect(typeof candles[0].close).toBe('number')
   })
 })
