@@ -1475,6 +1475,91 @@
 .wt-log-row .up { color: var(--color-up); font-weight: 600; }
 .wt-log-row .down { color: var(--color-down); font-weight: 600; }
 
+.wt-log-hint {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.wt-log-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wt-log-card {
+  flex: 0 0 180px;
+  min-width: 180px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  scroll-snap-align: start;
+}
+
+.wt-log-card-empty {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.wt-log-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wt-log-card-bar {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.wt-log-card-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wt-log-card-price {
+  font-size: 1.05rem;
+}
+
+.wt-log-card-shares {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.wt-log-card-bot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.wt-log-card-amt {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-light);
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.wt-log-card .up { color: var(--color-up); }
+.wt-log-card .down { color: var(--color-down); }
+
 .wt-result {
   background: var(--bg-card);
   border-radius: var(--radius-md);
