@@ -410,8 +410,8 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
     setShowReplayChart(false)
     try {
       const [actions, review] = await Promise.all([
-        window.electronAPI?.db?.getSessionActions(sessionId),
-        window.electronAPI?.db?.getSessionReview(sessionId)
+        window.mobileAPI?.db?.getSessionActions(sessionId) as Promise<SessionActionRecord[] | null | undefined> | undefined,
+        window.mobileAPI?.db?.getSessionReview(sessionId) as Promise<SessionReview | null | undefined> | undefined,
       ])
       setDetailActions(actions || [])
       setDetailReview(review || null)
@@ -427,12 +427,12 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
 
   const loadKlineForSession = useCallback(async (session: SessionSummary) => {
     try {
-      const raw = await window.electronAPI?.data?.getKline(session.stock_code, session.interval_type, 500)
+      const raw = await window.mobileAPI?.data?.getKline(session.stock_code, session.interval_type, 500)
       if (raw && Array.isArray(raw)) {
         const bars = raw
           .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
           .map((item) => {
-            const rawTs = item.timestamp || item.date || item.time || ''
+            const rawTs = item.trade_date || item.timestamp || item.date || ''
             const ts = typeof rawTs === 'string' ? new Date(rawTs).getTime() : Number(rawTs || 0)
             return {
               timestamp: Number.isFinite(ts) && ts > 0 ? ts : 0,
