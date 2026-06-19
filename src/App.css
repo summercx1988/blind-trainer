@@ -394,3 +394,53 @@
     font-size: 1.55rem;
   }
 }
+
+/* === AI 交易教练报告增强 === */
+.ai-habit-report-section {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(123, 140, 171, 0.05);
+}
+.ai-habit-report-section--good { border-left: 4px solid #16a34a; }
+.ai-habit-report-section--warn { border-left: 4px solid #f59e0b; }
+.ai-habit-report-section--bad  { border-left: 4px solid #dc2626; }
+.ai-habit-report-section h4 { margin-top: 0; }
+.ai-habit-report-section li { margin: 6px 0; line-height: 1.6; }
+
+.ai-habit-advisor-radar-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+.habit-radar-chart { max-width: 100%; }
+
+.ai-habit-advisor-sessions { margin-top: 20px; }
+.session-kline-card {
+  border: 1px solid rgba(123, 140, 171, 0.2);
+  border-radius: 8px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.session-kline-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: rgba(123, 140, 171, 0.05);
+}
+.session-kline-card-title { font-weight: 600; }
+.session-kline-card-meta { color: #7b8cab; font-size: 13px; }
+.session-kline-card-toggle { margin-left: auto; color: #505b73; font-size: 13px; }
+.session-kline-card-body { padding: 8px 14px 14px; }
+.session-kline-card-loading, .session-kline-card-error, .session-kline-card-note {
+  padding: 12px; color: #7b8cab; font-size: 13px;
+}
+.session-kline-card-error { color: #dc2626; }
+
+.ai-habit-advisor-report-md { margin-top: 6px; font-size: 13px; color: #505b73; }
+.ai-habit-advisor-link-btn {
+  background: none; border: none; color: #2563eb; cursor: pointer;
+  text-decoration: underline; padding: 0; font-size: 13px;
+}
