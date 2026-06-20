@@ -191,6 +191,17 @@ function App() {
 
       <div className="app-workspace">
         <header className="app-hero">
+          {activeModule !== 'overview' && (
+            <button
+              type="button"
+              className="app-hero-back"
+              onClick={() => { void navigateToModule('overview', false) }}
+              aria-label="返回训练总览"
+              title="返回训练总览"
+            >
+              ← 训练总览
+            </button>
+          )}
           <div className="app-hero-copy">
             <span className="app-hero-kicker">{activeDefinition.category}</span>
             <h2>{activeDefinition.label}</h2>

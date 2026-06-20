@@ -208,6 +208,32 @@
   text-transform: uppercase;
 }
 
+.app-hero-back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.app-hero-back:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--color-brand);
+  color: var(--text-primary);
+}
+.app-hero-back:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
 .app-hero-copy h2 {
   margin: 0;
   font-size: 2rem;
