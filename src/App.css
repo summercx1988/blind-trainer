@@ -330,6 +330,10 @@
     padding-bottom: 1rem;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    /* 竖向堆叠时取消 100vh 撑高, 否则会占满视口 */
+    height: auto;
+    position: relative;
+    top: auto;
   }
 
   .app-nav {

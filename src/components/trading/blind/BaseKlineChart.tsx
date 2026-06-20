@@ -77,7 +77,20 @@ const CHART_STYLES = {
     },
     tooltip: { showRule: 'follow_cross' as const, showType: 'standard' as const }
   },
-  indicator: { ohlc: { upColor: 'rgba(220, 38, 38, 0.65)', downColor: 'rgba(22, 163, 74, 0.65)' } },
+  indicator: {
+    ohlc: { upColor: 'rgba(220, 38, 38, 0.65)', downColor: 'rgba(22, 163, 74, 0.65)' },
+    // 量能柱 (VOL 指标) — A 股惯例: 涨红跌绿
+    // 不配则走 klinecharts 默认 (西方 绿涨红跌), 与 spec 冲突
+    bars: [{
+      style: 'fill' as const,
+      borderStyle: 'solid' as const,
+      borderSize: 1,
+      borderDashedValue: [2, 2],
+      upColor: 'rgba(220, 38, 38, 0.65)',
+      downColor: 'rgba(22, 163, 74, 0.65)',
+      noChangeColor: '#95a5a6'
+    }]
+  },
   xAxis: { show: true, tickText: { color: '#7b8cab', size: 11 } },
   yAxis: { show: true, tickText: { color: '#7b8cab', size: 11 } },
   crosshair: {

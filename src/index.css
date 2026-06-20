@@ -39,13 +39,14 @@
   --color-warning: #d97706;
   --color-warning-bg: #fffbeb;
 
-  /* P&L 等级色阶 — 训练日历用, 6 档, 亏损红/盈利绿对称 */
-  --color-pnl-loss-3: #b91c1c;  /* 亏损 ≥2% */
-  --color-pnl-loss-2: #ef4444;  /* 亏损 0.5-2% */
-  --color-pnl-loss-1: #fecaca;  /* 亏损 0-0.5% */
-  --color-pnl-gain-1: #bbf7d0;  /* 盈利 0-0.5% */
-  --color-pnl-gain-2: #22c55e;  /* 盈利 0.5-2% */
-  --color-pnl-gain-3: #15803d;  /* 盈利 ≥2% */
+  /* P&L 等级色阶 — 训练日历用, 6 档, A 股惯例: 涨红跌绿 */
+  /* gain (盈利/涨) → red 系, loss (亏损/跌) → green 系 */
+  --color-pnl-loss-3: #15803d;  /* 亏损 ≥2% (深绿) */
+  --color-pnl-loss-2: #22c55e;  /* 亏损 0.5-2% (绿) */
+  --color-pnl-loss-1: #bbf7d0;  /* 亏损 0-0.5% (淡绿) */
+  --color-pnl-gain-1: #fecaca;  /* 盈利 0-0.5% (淡红) */
+  --color-pnl-gain-2: #ef4444;  /* 盈利 0.5-2% (红) */
+  --color-pnl-gain-3: #b91c1c;  /* 盈利 ≥2% (深红) */
   --color-danger: #dc2626;
 
   /* Shadows (whisper, not shout) */
