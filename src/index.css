@@ -21,7 +21,8 @@
   /* Text */
   --text-primary: #1a1d23;
   --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  /* WCAG AA 4.5:1 pass on --bg-card: #71717a ≈ 4.5:1, --text-tertiary primary use case */
+  --text-tertiary: #71717a;
 
   /* Borders */
   --border: #e5e7eb;
@@ -60,7 +61,8 @@
   /* Dark card (account summary) */
   --dark-bg: #1a1d23;
   --dark-text: #f3f4f6;
-  --dark-text-secondary: rgba(243, 244, 246, 0.6);
+  /* WCAG AA: rgba 0.75 ≈ 5.5:1 contrast on --dark-bg */
+  --dark-text-secondary: rgba(243, 244, 246, 0.75);
   --dark-border: rgba(255, 255, 255, 0.1);
 }
 
