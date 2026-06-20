@@ -28,12 +28,12 @@ const CELL_GAP = 4
 const CELL_STEP = CELL_SIZE + CELL_GAP
 
 const PNL_LEVELS = [
-  { max: -2, color: '#d64d3f', label: '亏损 ≥2%' },
-  { max: -0.5, color: '#f29a88', label: '亏损 0.5%-2%' },
-  { max: 0, color: '#d7ddd9', label: '持平' },
-  { max: 0.5, color: '#a7d9b3', label: '盈利 0-0.5%' },
-  { max: 2, color: '#58b96f', label: '盈利 0.5%-2%' },
-  { max: Infinity, color: '#1f8f4c', label: '盈利 ≥2%' }
+  { max: -2, color: 'var(--color-pnl-loss-3)', label: '亏损 ≥2%' },
+  { max: -0.5, color: 'var(--color-pnl-loss-2)', label: '亏损 0.5%-2%' },
+  { max: 0, color: 'var(--color-pnl-loss-1)', label: '亏损 0-0.5%' },
+  { max: 0.5, color: 'var(--color-pnl-gain-1)', label: '盈利 0-0.5%' },
+  { max: 2, color: 'var(--color-pnl-gain-2)', label: '盈利 0.5%-2%' },
+  { max: Infinity, color: 'var(--color-pnl-gain-3)', label: '盈利 ≥2%' }
 ]
 
 const toMillis = (value: number | null | undefined): number => {
@@ -113,7 +113,7 @@ const getColor = (avgPnlPct: number): string => {
   for (const level of PNL_LEVELS) {
     if (avgPnlPct < level.max) return level.color
   }
-  return '#e0e0e0'
+  return 'var(--bg-subtle)'
 }
 
 const getWeeks = (): string[] => {
@@ -371,7 +371,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
         const dateStr = toDateKey(cellDate)
         const activity = dayMap.get(dateStr)
         const isToday = dateStr === today
-        const color = activity ? getColor(activity.avgPnlPct) : '#f0f3f1'
+        const color = activity ? getColor(activity.avgPnlPct) : 'var(--bg-subtle)'
         const isSelected = calendarSelectedDate === dateStr
         cells.push(
           <rect
@@ -382,7 +382,7 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
             height={CELL_SIZE}
             rx={3}
             fill={color}
-            stroke={isSelected ? '#132238' : isToday ? '#132238' : activity ? 'rgba(19, 34, 56, 0.16)' : 'rgba(19, 34, 56, 0.06)'}
+            stroke={isSelected ? 'var(--text-primary)' : isToday ? 'var(--text-primary)' : activity ? 'var(--border)' : 'var(--border-light)'}
             strokeWidth={isSelected || isToday ? 2.5 : 1}
             onMouseEnter={(e) => handleCellHover(dateStr, e)}
             onMouseLeave={handleCellLeave}
@@ -767,12 +767,12 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
             <div className="ov-calendar-wrap">
               <svg width={svgWidth} height={svgHeight} className="ov-calendar-svg">
                 {WEEKDAY_LABELS.map((label, i) => (
-                  <text key={label} x={24} y={i * CELL_STEP + 18 + CELL_SIZE / 2} textAnchor="end" dominantBaseline="middle" fill="#999" fontSize={10}>
+                  <text key={label} x={24} y={i * CELL_STEP + 18 + CELL_SIZE / 2} textAnchor="end" dominantBaseline="middle" fill="var(--text-tertiary)" fontSize={10}>
                     {i % 2 === 1 ? label : ''}
                   </text>
                 ))}
                 {monthMarkers.map((m) => (
-                  <text key={`${m.label}-${m.x}`} x={m.x} y={12} fill="#999" fontSize={10}>{m.label}</text>
+                  <text key={`${m.label}-${m.x}`} x={m.x} y={12} fill="var(--text-tertiary)" fontSize={10}>{m.label}</text>
                 ))}
                 {calendarCells}
               </svg>
