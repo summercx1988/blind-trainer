@@ -1,0 +1,16 @@
+/*
+  X-Content-Type-Options: nosniff
+
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sql-wasm.wasm
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/wasm
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+  Service-Worker-Allowed: /
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json

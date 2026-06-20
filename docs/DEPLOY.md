@@ -3,12 +3,57 @@
 ## 前置条件
 
 - 已 push mobile 分支到 GitHub（已完成）
-- Vercel 账号（免费）
 - 一台能跑命令行的机器
 
-## 方式 1：Vercel CLI 一键部署（推荐）
+## 方式 0：Cloudflare Pages（推荐，国内免梯子）
+
+`vercel.com` 在国内 TLS 握手被 RST（直连不可用）；Cloudflare 的 `api.cloudflare.com` / `pages.cloudflare.com` 国内可直连，故采用 CF Pages。
+
+### 第一次部署
 
 ```bash
+cd /path/to/blind-trainer-mobile
+
+# 1. 安装依赖（含 wrangler）
+npm install
+
+# 2. 登录 Cloudflare（浏览器弹出授权页，走 dash.cloudflare.com，国内可达）
+npm run cf:login
+
+# 3. 部署到生产（自动 build + 上传 dist）
+npm run cf:deploy
+```
+
+首次 `cf:deploy` 会问：
+- `Create Pages project?` → **Y**
+- `Production branch name` → **mobile**
+
+完成后输出 `https://blind-trainer.pages.dev`（或自定义域名）。
+
+### 后续更新
+
+```bash
+npm run cf:deploy        # 生产
+npm run cf:preview       # 预览分支（branch=preview）
+```
+
+### 配置文件
+
+- `public/_headers`：cache + MIME 规则（对齐原 vercel.json）
+- `public/_redirects`：SPA fallback（`/* → /index.html 200`）
+- CF Pages 自动识别这两个文件，无需在 dashboard 配置
+
+---
+
+## 方式 1：Vercel CLI（备选，需代理）
+
+> ⚠️ 国内网络直连 vercel.com 会 TLS 握手失败，需先开代理。
+
+```bash
+# 先开代理（Clash/V2Ray 等），假设本地代理端口 7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+export HTTP_PROXY=http://127.0.0.1:7890
+
 # 在项目根目录
 cd /path/to/blind-trainer-mobile
 
@@ -24,7 +69,9 @@ vercel --prod
 
 按提示操作（首次会问是否创建 project → 选 yes；git 链接选 yes）。完成后会输出 `https://blind-trainer-xxx.vercel.app`。
 
-## 方式 2：Vercel GitHub 集成（零配置）
+## 方式 2：Vercel GitHub 集成（零配置，需代理打开 vercel.com）
+
+> ⚠️ 同方式 1，vercel.com 网页面板国内被墙，浏览器需开代理才能访问。
 
 1. 登录 https://vercel.com
 2. New Project → Import `summercx1988/blind-trainer` 仓库
