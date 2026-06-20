@@ -93,8 +93,11 @@ blind-trainer/
 1. 读相关 docs（`docs/`）
 2. 在 `main` 分支做
 3. 写代码 + 跑 `npx tsc -b --noEmit`
-4. 启动验证：`npm run dev`
-5. 提交：`git commit -m "feat: ..."` → `git push`
+4. **完整编译验证**：`npm run build`（= `tsc -b && vite build`，含产物打包）— agent 完成任务前**必跑**，不要只跑 tsc
+5. **测试验证**：若涉及测试相关文件，跑 `npm test`
+6. 启动验证：`npm run dev`（用户手动，agent 不强求）
+7. 提交：每完成一个独立任务 `git commit -m "feat: ..."`
+8. **同步远程**：每个任务完成后 `git push origin main`（agent 默认推；若远程领先则先 rebase 解冲突再推）
 
 ### 5.2 排查数据问题
 
