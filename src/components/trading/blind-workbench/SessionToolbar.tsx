@@ -14,8 +14,13 @@ const SAMPLE_POOL_OPTIONS = [
   { value: 1560, label: '超深' }
 ]
 
-const CANDIDATE_DEFAULT = [200, 500]
-const CANDIDATE_ADVANCED = [1000, 2000]
+const CANDIDATE_OPTIONS = [200, 500, 1000, 2000]
+const CANDIDATE_LABELS: Record<number, string> = {
+  200: '标准',
+  500: '广泛',
+  1000: '超广',
+  2000: '全集'
+}
 
 interface SessionToolbarProps {
   activeSample: TrainingSample | null
@@ -84,7 +89,6 @@ const SettingsPanel = ({
   onResetSettings
 }: SettingsPanelProps) => {
   const [draftSettings, setDraftSettings] = useState(() => createDraftSettings(initialSettings))
-  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const hasChanges =
     draftSettings.regime !== initialSettings.regime ||
@@ -155,28 +159,16 @@ const SettingsPanel = ({
             <span className="wt-tooltip-trigger" data-tooltip="从多少只候选股票中随机抽取训练样本。数值越大，样本多样性越高，但加载耗时越长。">?</span>
           </span>
           <div className="wt-period-btns">
-            {CANDIDATE_DEFAULT.map((value) => (
+            {CANDIDATE_OPTIONS.map((value) => (
               <button
                 key={value}
                 className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
                 onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
                 disabled={sampleLoading}
               >
-                {value === 200 ? '标准' : '广泛'}
+                {CANDIDATE_LABELS[value] || value}
               </button>
             ))}
-            {(showAdvanced || CANDIDATE_ADVANCED.includes(draftSettings.candidateCount)) &&
-              CANDIDATE_ADVANCED.map((value) => (
-                <button
-                  key={value}
-                  className={`wt-period-btn ${draftSettings.candidateCount === value ? 'active' : ''}`}
-                  onClick={() => setDraftSettings((current) => ({ ...current, candidateCount: value }))}
-                  disabled={sampleLoading}
-                >
-                  {value}
-                </button>
-              ))
-            }
           </div>
         </div>
         <div className="wt-filter-group">
@@ -256,16 +248,6 @@ const SettingsPanel = ({
         样本不足时系统自动扩展，无需手动操作。
       </div>
 
-      {/* 高级折叠 */}
-      {!showAdvanced && !CANDIDATE_ADVANCED.includes(draftSettings.candidateCount) && (
-        <button
-          className="wt-advanced-toggle"
-          onClick={() => setShowAdvanced(true)}
-        >
-          高级选项
-        </button>
-      )}
-
       {/* 底部操作栏 */}
       <div className="wt-settings-footer">
         <button
@@ -278,7 +260,7 @@ const SettingsPanel = ({
         {hasChanges && (
           <span className="wt-settings-hint">
             {sessionStatus === 'running' && destructiveChanged
-              ? '⚠ 将结束当前训练并重载样本'
+              ? '将结束当前训练并重载样本'
               : '有未应用的更改'}
           </span>
         )}
