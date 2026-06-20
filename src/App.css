@@ -658,3 +658,53 @@
   color: var(--text-primary);
   line-height: 1.6;
 }
+
+/* === 配置文件路径展示 === */
+.ai-advisor-settings-config-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.ai-advisor-settings-config-file-label {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.ai-advisor-settings-config-path {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-advisor-settings-open-file {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  background: var(--bg-card);
+  color: var(--color-brand);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.ai-advisor-settings-open-file:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--color-brand);
+}
+.ai-advisor-settings-open-file:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}

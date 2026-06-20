@@ -9,6 +9,13 @@ import { buildMessages, parseReportResponse, selectRepresentativeSessions } from
 import { callLlm, testConnection } from '../services/ai-client'
 import { resolveEndpoint, DEFAULT_BASE_URL, DEFAULT_MODEL } from '../services/endpoint-resolver'
 import { reportToMarkdown, buildReportFilename, saveReportMd, getReportsDir } from '../services/md-exporter'
+import {
+  readConfigFromFile,
+  writeConfigToFile,
+  maskApiKey,
+  getConfigPath,
+  migrateFromSqlite,
+} from '../services/ai-config'
 import { DEFAULT_HABIT_CONFIG } from '../../types/agent'
 import type {
   AiAdvisorConfig,
@@ -20,22 +27,29 @@ import type {
   SessionRow,
 } from '../../types/agent'
 
-const CONFIG_KEY = 'ai_advisor_config'
 const MIN_SESSIONS = 3
 
+// 首次加载时尝试从老 SQLite 迁移
+let _migrated = false
+const ensureMigrated = () => {
+  if (_migrated) return
+  _migrated = true
+  const { migrated } = migrateFromSqlite()
+  if (migrated) log.info('[agent] SQLite → ai-config.env 迁移完成')
+}
+
+/**
+ * 读取 AI 配置。优先级: ai-config.env 文件 → ANTHROPIC_* 环境变量 → 默认值。
+ * 不再读写 SQLite, 旧 SQLite 数据在首次启动时迁移到 env 文件。
+ */
 const readConfig = (): AiAdvisorConfig => {
-  const row = getDb()
-    .prepare('SELECT value_json FROM app_preferences WHERE key = ? LIMIT 1')
-    .get(CONFIG_KEY) as { value_json?: string } | undefined
-  let parsed: Partial<AiAdvisorConfig> & { endpoint?: string } = {}
-  if (row?.value_json) {
-    try { parsed = JSON.parse(row.value_json) } catch { /* ignore */ }
-  }
-  // 兼容旧字段名 endpoint → baseUrl（老配置迁移）
-  const baseUrl = parsed.baseUrl || parsed.endpoint
+  ensureMigrated()
+  const file = readConfigFromFile()
+  // 兼容旧字段名 endpoint → baseUrl（老配置迁移后字段）
+  const baseUrl = file.baseUrl
     || process.env.ANTHROPIC_BASE_URL || DEFAULT_BASE_URL
-  const apiKey = parsed.apiKey || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY || ''
-  const model = parsed.model || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL
+  const apiKey = file.apiKey || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY || ''
+  const model = file.model || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL
   return { baseUrl, apiKey, model, ready: Boolean(apiKey) }
 }
 
@@ -76,31 +90,48 @@ const loadProfileData = (profileId: string): ProfileData => {
 export function registerAgentIpc() {
   ipcMain.handle('agent:getConfig', async () => {
     const c = readConfig()
-    const maskedKey = c.apiKey ? `****${c.apiKey.slice(-4)}` : ''
-    return { baseUrl: c.baseUrl, model: c.model, ready: c.ready, apiKeyMasked: maskedKey }
+    return {
+      baseUrl: c.baseUrl,
+      model: c.model,
+      ready: c.ready,
+      apiKeyMasked: maskApiKey(c.apiKey),
+      configPath: getConfigPath(),
+      fileExists: fs.existsSync(getConfigPath()),
+    }
   })
 
   ipcMain.handle('agent:saveConfig', async (_, payload: { baseUrl?: string; endpoint?: string; apiKey?: string; model?: string }) => {
     try {
-      const now = Math.floor(Date.now() / 1000)
       const current = readConfig()
       // 兼容两种字段名；baseUrl 优先，其次 endpoint（老前端）
       const baseUrl = payload.baseUrl !== undefined
         ? payload.baseUrl
         : (payload.endpoint !== undefined ? payload.endpoint : current.baseUrl)
-      const next = {
+      // apiKey 留空 = 保持原值 (与现有 UI 行为一致)
+      const apiKey = payload.apiKey || current.apiKey
+      writeConfigToFile({
         baseUrl,
-        apiKey: payload.apiKey || current.apiKey,
+        apiKey,
         model: payload.model || current.model,
-      }
-      getDb().prepare(`
-        INSERT INTO app_preferences (key, value_json, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
-      `).run(CONFIG_KEY, JSON.stringify(next), now)
+      })
       return { success: true }
     } catch (error) {
       log.error('[agent] saveConfig ERROR:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('agent:getConfigPath', async () => getConfigPath())
+
+  ipcMain.handle('agent:openConfigFile', async () => {
+    try {
+      const file = getConfigPath()
+      // 文件不存在时先创建空模板
+      if (!fs.existsSync(file)) writeConfigToFile({})
+      await shell.openPath(file)
+      return { success: true }
+    } catch (error) {
+      log.error('[agent] openConfigFile ERROR:', error)
       return { success: false, error: String(error) }
     }
   })
@@ -246,5 +277,4 @@ export function registerAgentIpc() {
       return { success: false, error: String(error) }
     }
   })
-}
 }

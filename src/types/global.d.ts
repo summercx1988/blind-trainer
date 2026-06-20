@@ -85,8 +85,10 @@ declare global {
       }
 
       agent?: {
-        getConfig: () => Promise<{ baseUrl: string; model: string; ready: boolean; apiKeyMasked: string }>
+        getConfig: () => Promise<{ baseUrl: string; model: string; ready: boolean; apiKeyMasked: string; configPath: string; fileExists: boolean }>
         saveConfig: (config: { baseUrl?: string; endpoint?: string; apiKey?: string; model?: string }) => Promise<{ success: boolean; error?: string }>
+        getConfigPath: () => Promise<string>
+        openConfigFile: () => Promise<{ success: boolean; error?: string }>
         testConnection: () => Promise<{ ok: boolean; latencyMs: number; error: string | null }>
         analyzeHabits: (profileId: string) => Promise<unknown>
         generateReport: (req: { profileId: string; habitProfileId?: string; force?: boolean }) => Promise<unknown>

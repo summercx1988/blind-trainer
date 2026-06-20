@@ -13,6 +13,7 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [configPath, setConfigPath] = useState('')
 
   useEffect(() => {
     void (async () => {
@@ -22,6 +23,7 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
         setModel(cfg.model)
         setReady(cfg.ready)
         setMasked(cfg.apiKeyMasked)
+        setConfigPath(cfg.configPath)
       }
     })()
   }, [])
@@ -48,11 +50,18 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
       if (cfg) {
         setReady(cfg.ready)
         setMasked(cfg.apiKeyMasked)
+        setConfigPath(cfg.configPath)
+        // 保存后清空 apiKey 输入, 与"留空则不修改"语义一致
+        setApiKey('')
       }
       onSaved?.()
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleOpenConfigFile = async () => {
+    await window.electronAPI?.agent?.openConfigFile()
   }
 
   return (
@@ -94,6 +103,20 @@ export default function AiAdvisorSettings({ onSaved }: AiAdvisorSettingsProps) {
         </button>
       </div>
       {testResult && <div className="ai-advisor-settings-test-result">{testResult}</div>}
+      {configPath && (
+        <div className="ai-advisor-settings-config-file">
+          <span className="ai-advisor-settings-config-file-label">配置文件：</span>
+          <code className="ai-advisor-settings-config-path" title={configPath}>{configPath}</code>
+          <button
+            type="button"
+            className="ai-advisor-settings-open-file"
+            onClick={handleOpenConfigFile}
+            title="用默认编辑器打开 ai-config.env 手动编辑"
+          >
+            打开
+          </button>
+        </div>
+      )}
       {!ready && (
         <div className="ai-advisor-settings-warning" role="status">
           注意：AI 教练将向 {baseUrl || '配置的 Base URL'} 发送你的脱敏训练记录（含已结束 session 的股票代码与动作序列）。配置即视为同意。
