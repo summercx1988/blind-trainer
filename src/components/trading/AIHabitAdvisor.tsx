@@ -116,10 +116,20 @@ export default function AIHabitAdvisor() {
         {prevHabit && habit && (
           <div className="ai-habit-advisor-trend">
             {trendChase !== null && (
-              <span>追涨率 {trendChase > 0 ? '▲' : '▼'} {fmtPct(Math.abs(trendChase))} </span>
+              <span>
+                追涨率 {fmtPct(prevHabit.indicators.chase_high_rate)} → {fmtPct(habit.indicators.chase_high_rate)}
+                <span className={trendChase > 0 ? 'trend-up' : trendChase < 0 ? 'trend-down' : ''}>
+                  {' '}({trendChase > 0 ? '+' : trendChase < 0 ? '-' : ''}{fmtPct(Math.abs(trendChase))})
+                </span>
+              </span>
             )}
             {trendWin !== null && (
-              <span>胜率 {trendWin > 0 ? '▲' : '▼'} {fmtPct(Math.abs(trendWin))}</span>
+              <span>
+                胜率 {fmtPct(prevHabit.indicators.result_group.win_rate)} → {fmtPct(habit.indicators.result_group.win_rate)}
+                <span className={trendWin > 0 ? 'trend-up' : trendWin < 0 ? 'trend-down' : ''}>
+                  {' '}({trendWin > 0 ? '+' : trendWin < 0 ? '-' : ''}{fmtPct(Math.abs(trendWin))})
+                </span>
+              </span>
             )}
             <span className="ai-habit-advisor-trend-label">vs 上次</span>
           </div>
@@ -148,7 +158,12 @@ export default function AIHabitAdvisor() {
 
       {showSettings && <AiAdvisorSettings onSaved={() => { void loadInit(); setShowSettings(false) }} />}
 
-      {error && <div className="ai-habit-advisor-error">{error}</div>}
+      {error && (
+        <div className="ai-habit-advisor-error" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={handleAnalyze} disabled={loadingHabit}>重试</button>
+        </div>
+      )}
       {!configReady && !showSettings && (
         <div className="ai-habit-advisor-warning" role="status">
           未配置 AI 助手，无法生成 AI 报告（本地指标仍可查看）。
@@ -246,7 +261,7 @@ export default function AIHabitAdvisor() {
           ) : parsedReport && 'fallback_text' in parsedReport ? (
             <pre className="ai-habit-advisor-fallback">{parsedReport.fallback_text}</pre>
           ) : (
-            <div className="ai-habit-advisor-error">报告解析失败，原始内容见日志</div>
+            <div className="ai-habit-advisor-error" role="alert">报告解析失败，原始内容见日志</div>
           )}
           {repSessions.length > 0 && (
             <div className="ai-habit-advisor-sessions">
@@ -258,7 +273,12 @@ export default function AIHabitAdvisor() {
           )}
         </section>
       )}
-      {reportError && <div className="ai-habit-advisor-error">{reportError}</div>}
+      {reportError && (
+        <div className="ai-habit-advisor-error" role="alert">
+          <span>{reportError}</span>
+          <button type="button" onClick={() => { void handleGenerateReport(false) }} disabled={loadingReport || !habit || !configReady}>重试</button>
+        </div>
+      )}
     </div>
   )
 }
