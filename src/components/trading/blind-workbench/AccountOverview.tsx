@@ -22,6 +22,7 @@ interface AccountOverviewProps {
   benchmarkMarkers?: BaseMarker[]
   visibleCount: number
   onVisibleCountChange: (value: number) => void
+  onOpenCheat?: () => void
 }
 
 const AccountOverview = ({
@@ -35,7 +36,8 @@ const AccountOverview = ({
   tradeMarkers,
   benchmarkMarkers,
   visibleCount,
-  onVisibleCountChange
+  onVisibleCountChange,
+  onOpenCheat
 }: AccountOverviewProps) => {
   const prevBar = visibleBars.length >= 2 ? visibleBars[visibleBars.length - 2] : null
   const changePct = prevBar && prevBar.close > 0
@@ -106,6 +108,17 @@ const AccountOverview = ({
         </div>
         <div className="wt-chart-container">
           <KlineChart data={visibleBars} tradeMarkers={tradeMarkers} benchmarkMarkers={benchmarkMarkers} />
+          {onOpenCheat && (
+            <button
+              type="button"
+              className="wt-cheat-fab"
+              onClick={onOpenCheat}
+              aria-label="打开快捷键说明"
+              title="快捷键说明（?）"
+            >
+              快捷键 <kbd>?</kbd>
+            </button>
+          )}
         </div>
         <div className="wt-chart-info">
           <div className="wt-info-item">

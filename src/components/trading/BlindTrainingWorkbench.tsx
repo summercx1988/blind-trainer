@@ -1203,6 +1203,7 @@ const BlindTrainingWorkbench = ({ onNavigate, autoStart, registerNavigationGuard
                 tradeMarkers={visibleTradeMarkers}
                 visibleCount={visibleCount}
                 onVisibleCountChange={setVisibleCount}
+                onOpenCheat={() => setCheatSheetOpen(true)}
               />
 
               <ActionSection

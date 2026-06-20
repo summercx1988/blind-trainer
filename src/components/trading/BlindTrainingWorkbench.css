@@ -1123,11 +1123,16 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 120ms ease, color 120ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.wt-btn:not(:disabled):active {
+  background-color: var(--bg-card-hover);
+  color: var(--text-primary);
 }
 
 .wt-btn:disabled {
@@ -1895,6 +1900,45 @@
   border-radius: 3px;
   color: var(--text-primary);
 }
+
+/* === K 线图右下角浮动快捷键按钮 === */
+.wt-cheat-fab {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  z-index: 5;
+}
+.wt-cheat-fab:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--color-brand);
+  color: var(--text-primary);
+}
+.wt-cheat-fab:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.wt-cheat-fab kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+.wt-chart-container { position: relative; }
 
 /* === 快捷键说明弹窗 === */
 .wt-cheat-overlay {
