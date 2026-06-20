@@ -4,21 +4,21 @@
 
 ### P0 — 功能性 Bug
 
-| # | 问题 | 根因 | 影响 |
-|---|------|------|------|
-| 1 | **应用配置后不刷新** | `onApplySettings` 在 idle 状态只设 `setInitialized(false)`，未触发样本重新加载流程 **（修订：根因需先 grep 确认——若存在 `useEffect(()=>loadSamples(), [initialized])`，则问题在依赖不全或 effect 早退，而非未触发）** | 改了样本池深度/抽样范围，样本池不变 |
-| 2 | **K线 +- 按钮无效** | `BaseKlineChart` 用 `chart.setDataLoader()` 注册回调，但 klinecharts 不会主动重新获取数据。`visibleCount` 变化后图表内容不更新 **（修订：`applyNewData` 不是唯一修法，应先核对当前 klinecharts 版本的 `updateData` / 重新触发 loader 等 API 语义）** | 点击 +- 后 visibleCount 数值变了，但 K 线图毫无变化 |
-| 3 | **配置不持久化（已修复）** | `samplePoolBars`/`candidateCount` 只在 useState 中，退出后丢失 **（修订：需 `git show f54ff00` 验证实际改动，避免文档与代码脱节）** | 已通过 `app_preferences` 表持久化（commit `f54ff00`） |
+| # | 问题 | 根因 | 影响 | 当前状态 |
+|---|------|------|------|---------|
+| 1 | **应用配置后不刷新** | `onApplySettings` 在 idle 状态只设 `setInitialized(false)`，未触发样本重新加载流程 **（修订：根因需先 grep 确认——若存在 `useEffect(()=>loadSamples(), [initialized])`，则问题在依赖不全或 effect 早退，而非未触发）** | 改了样本池深度/抽样范围，样本池不变 | ✅ **已实现**：`handleApplySettings` 内部 `setInitialized(false)` → `useEffect` 依赖 `[initialized, loadSamples, prefsLoaded]` 触发 reload（[L1159-1188](../src/components/trading/BlindTrainingWorkbench.tsx)） |
+| 2 | **K线 +- 按钮无效** | `BaseKlineChart` 用 `chart.setDataLoader()` 注册回调，但 klinecharts 不会主动重新获取数据。`visibleCount` 变化后图表内容不更新 **（修订：`applyNewData` 不是唯一修法，应先核对当前 klinecharts 版本的 `updateData` / 重新触发 loader 等 API 语义）** | 点击 +- 后 visibleCount 数值变了，但 K 线图毫无变化 | ✅ **已实现**：`BaseKlineChart` 用 `resetData + setDataLoader` 双 effect 模式，visibleCount 单独触发 `scrollToDataIndex`（[L320-353](../src/components/trading/blind/BaseKlineChart.tsx)） |
+| 3 | **配置不持久化（已修复）** | `samplePoolBars`/`candidateCount` 只在 useState 中，退出后丢失 **（修订：需 `git show f54ff00` 验证实际改动，避免文档与代码脱节）** | 已通过 `app_preferences` 表持久化（commit `f54ff00`） | ✅ 已通过 `workbench_settings_v1` 持久化 |
 
 ### P1 — UX 设计问题
 
-| # | 问题 | 分析 |
-|---|------|------|
-| 4 | **周期设置只有一个选项** | 当前只有 `1d`（日线），设置面板中保留一个单选按钮纯粹是冗余占位 |
-| 5 | **"补载更多K线"按钮定位不清** | 该功能调用 `extendActiveSample()`，重新从数据库拉取该股票全部 K 线以扩展当前样本长度。但：① 训练到样本末尾时代码已自动调用（[L502](../src/components/trading/BlindTrainingWorkbench.tsx#L502)）；② 手动点击可能在训练中导致 currentBarIndex 映射错乱；③ 用户不知道什么时候该点 |
-| 6 | **成交模式名称不直观** | "盘尾收盘"/"次根开盘" — 用户难以理解实际区别（当前K线收盘价成交 vs 下一根K线开盘价成交） |
-| 7 | **样本池深度/抽样范围认知负荷高** | 暴露了内部实现参数（260/520/1040/1560 根，40/80/200/500 只）。大多数用户无法感知"520根"和"1040根"的训练差异，也不知道该选哪个 |
-| 8 | **最低股价位置尴尬** | 在样本池/抽样范围设置中混入了一个数字输入框，视觉割裂 |
+| # | 问题 | 分析 | 当前状态 |
+|---|------|------|---------|
+| 4 | **周期设置只有一个选项** | 当前只有 `1d`（日线），设置面板中保留一个单选按钮纯粹是冗余占位 | ✅ **已无 UI 入口**：SettingsPanel 完全没 period 选择（[SessionToolbar L78-300](../src/components/trading/blind-workbench/SessionToolbar.tsx)） |
+| 5 | **"补载更多K线"按钮定位不清** | 该功能调用 `extendActiveSample()`，重新从数据库拉取该股票全部 K 线以扩展当前样本长度。但：① 训练到样本末尾时代码已自动调用（[L502](../src/components/trading/BlindTrainingWorkbench.tsx#L502)）；② 手动点击可能在训练中导致 currentBarIndex 映射错乱；③ 用户不知道什么时候该点 | ✅ **已自动 + UI 提示**：设置面板加「样本不足时系统自动扩展，无需手动操作」灰字（[L254-256](../src/components/trading/blind-workbench/SessionToolbar.tsx)），手动按钮已无入口 |
+| 6 | **成交模式名称不直观** | "盘尾收盘"/"次根开盘" — 用户难以理解实际区别（当前K线收盘价成交 vs 下一根K线开盘价成交） | ✅ **已重命名 + tooltip**：「当天收盘价 / 次日开盘价」+ tooltip 明确 t 时刻 / t+1 时刻（[L7-9](../src/components/trading/blind-workbench/SessionToolbar.tsx)） |
+| 7 | **样本池深度/抽样范围认知负荷高** | 暴露了内部实现参数（260/520/1040/1560 根，40/80/200/500 只）。大多数用户无法感知"520根"和"1040根"的训练差异，也不知道该选哪个 | ⚠️ **部分解决**：抽样范围改 200/500/1000/2000（commit `a3639a8`）；样本深度仍为 520/1040/1560 三档 + tooltip 解释"标准/深度/超深"约几年日线。R4 文档修订提出"从设置面板移除迁到 K 线图下方"未实施（决策见 §六.6 状态说明） |
+| 8 | **最低股价位置尴尬** | 在样本池/抽样范围设置中混入了一个数字输入框，视觉割裂 | ✅ **已重新分组**：在「样本筛选」组内紧邻走势筛选，不再嵌入抽样范围组（[L182-196](../src/components/trading/blind-workbench/SessionToolbar.tsx)） |
 
 ---
 
@@ -232,3 +232,23 @@ chart.applyNewData(klineData)
 | 1560 根 × 多指标的实测性能 | 性能 | Phase 1.2 修复完成后立即做 |
 | 设置变更的原子性 / 回滚 | 可靠性 | 持久化改造时一并设计 |
 | 预设保存（用户自定义配置组） | 体验 | v2 视用户反馈决定 |
+
+### 6.2 当前实际状态 (2026-06-20 同步)
+
+本节记录本次 UI/UX 优化回合后的真实状态，与 §一/§二/§三 的"问题/方案"对照。
+
+| 方案项 | 状态 | 实际落点 |
+|--------|------|----------|
+| P0 #1 应用配置刷新 | ✅ | `handleApplySettings` 在 idle 状态通过 `[initialized]` 依赖触发 `useEffect` reload |
+| P0 #2 K线 +/- 生效 | ✅ | `BaseKlineChart` 用 `resetData + setDataLoader` 双 effect + 单独 visibleCount effect |
+| Phase 2.1 移除周期 | ✅ | SettingsPanel 根本无 period 选择 |
+| Phase 2.1 移除补载按钮 | ✅ | UI 已无入口，SettingsPanel 加「自动扩展」灰字提示 |
+| Phase 2.2 样本深度迁出 | ❌ **未实施** | R4 修订提出但落地时决策为「保留 + tooltip 解释」：3 档（标准/深度/超深）+ tooltip 注明对应年数，多数用户已能感知差异 |
+| Phase 2.3 抽样 200/500/1000/2000 | ✅ | commit `a3639a8`，4 档平铺标签：标准/广泛/超广/全集 |
+| Phase 3.1 成交模式重命名 | ✅ | 「当天收盘价 / 次日开盘价」+ tooltip 明确 t/t+1 |
+| Phase 3.2 最低股价移位 | ✅ | 已在「样本筛选」组内，与走势筛选相邻 |
+| Phase 3.3 破坏性 vs 热生效 | ✅ | `destructiveChanged` 判定 + 「将结束当前训练并重载样本」内联提示 |
+| 新增「恢复默认」按钮 | ✅ | 「恢复默认」按钮 + 取消「高级选项」折叠 |
+| ⚠ 装饰字符 | ✅ | 删 1 处 ⚠（commit `a3639a8`），与 P0-3 emoji 清理一致 |
+
+**总结**：本回合实际完成 P0 全部 + P1 多数（6/8），未实施项仅 R4 「样本深度迁出」（与代码实际决定不一致——R4 是修订时新增的建议，但实施时发现 3 档 + tooltip 解释已能解决认知负荷问题，迁出会让用户失去单一设置入口的可发现性）。**已不需再动本文件所列方案**——下一轮 UI/UX 优化应基于 `docs/ui-ux-review-2026-06-19.md` 的 P1/P2 列表推进。
