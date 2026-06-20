@@ -724,10 +724,17 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
                         {topBest.map((s) => {
                           const pnlPct = toSessionPnlPct(s)
                           return (
-                            <div key={s.id} className="ov-highlight-row" onClick={() => void handleOpenSession(s.id)}>
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`ov-highlight-row ${selectedSessionId === s.id ? 'active' : ''}`}
+                              onClick={() => void handleOpenSession(s.id)}
+                              aria-current={selectedSessionId === s.id ? 'true' : undefined}
+                              aria-label={`查看 ${s.stock_name || s.stock_code} 详情, 收益率 ${formatSignedPercent(pnlPct)}`}
+                            >
                               <span className="ov-highlight-name">{s.stock_name || s.stock_code}</span>
                               <span className="ov-highlight-pnl up">{formatSignedPercent(pnlPct)}</span>
-                            </div>
+                            </button>
                           )
                         })}
                       </div>
@@ -738,10 +745,17 @@ const TrainingOverview = ({ onStartTraining }: TrainingOverviewProps) => {
                         {topWorst.map((s) => {
                           const pnlPct = toSessionPnlPct(s)
                           return (
-                            <div key={s.id} className="ov-highlight-row" onClick={() => void handleOpenSession(s.id)}>
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`ov-highlight-row ${selectedSessionId === s.id ? 'active' : ''}`}
+                              onClick={() => void handleOpenSession(s.id)}
+                              aria-current={selectedSessionId === s.id ? 'true' : undefined}
+                              aria-label={`查看 ${s.stock_name || s.stock_code} 详情, 收益率 ${formatSignedPercent(pnlPct)}`}
+                            >
                               <span className="ov-highlight-name">{s.stock_name || s.stock_code}</span>
                               <span className="ov-highlight-pnl down">{formatSignedPercent(pnlPct)}</span>
-                            </div>
+                            </button>
                           )
                         })}
                       </div>

@@ -399,10 +399,26 @@
   padding: 5px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s;
+  border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .ov-highlight-row:hover { background: var(--color-brand-bg); }
+.ov-highlight-row:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 1px;
+}
+.ov-highlight-row.active {
+  background: var(--color-brand-bg);
+  border-color: var(--color-brand);
+  border-left-width: 3px;
+  padding-left: 4px;
+}
 
 .ov-highlight-name { font-size: 0.82rem; color: var(--text-primary); }
 
