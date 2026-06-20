@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import AiAdvisorSettings from './blind-workbench/AiAdvisorSettings'
 import HabitRadarChart from './ai-advisor/HabitRadarChart'
 import SessionKlineCard from './ai-advisor/SessionKlineCard'
+import InfoHover from '../common/InfoHover'
+import { INDICATOR_DOCS } from './ai-advisor/indicatorDocs'
 import type { HabitIndicators, RepresentativeSession } from '../../types/agent'
 
 interface HabitProfileRecord {
@@ -32,6 +34,25 @@ const unwrap = <T,>(r: unknown): T | null => (isPlatformOk(r) ? ((r as { data: T
 
 const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`
 const fmtNum = (n: number) => n.toFixed(2)
+const fmtInt = (n: number) => Math.round(n).toString()
+
+type IndicatorValue = number | HabitIndicators['result_group'][keyof HabitIndicators['result_group']]
+
+const formatIndicator = (value: IndicatorValue, format: 'pct' | 'num' | 'int'): string => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—'
+  if (format === 'pct') return fmtPct(value)
+  if (format === 'int') return fmtInt(value)
+  return fmtNum(value)
+}
+
+const getIndicatorValue = (indicators: HabitIndicators, key: string): IndicatorValue => {
+  // result_group 字段映射到扁平 key
+  if (key === 'win_rate') return indicators.result_group.win_rate
+  if (key === 'avg_pnl_pct') return indicators.result_group.avg_pnl_pct
+  if (key === 'max_drawdown_pct') return indicators.result_group.max_drawdown_pct
+  if (key === 'max_loss_streak') return indicators.result_group.max_loss_streak
+  return (indicators as unknown as Record<string, number>)[key] ?? 0
+}
 
 export default function AIHabitAdvisor() {
   const [profileId, setProfileId] = useState<string>('default')
@@ -175,20 +196,29 @@ export default function AIHabitAdvisor() {
         <section className="ai-habit-advisor-indicators">
           <h3>习惯指标（基于 {habit.session_count} 场训练）</h3>
           <div className="ai-habit-advisor-indicator-grid">
-            <div className="ai-habit-card"><span>追涨率</span><strong>{fmtPct(habit.indicators.chase_high_rate)}</strong></div>
-            <div className="ai-habit-card"><span>倒金字塔加仓率</span><strong>{fmtPct(habit.indicators.inverse_pyramid_rate)}</strong></div>
-            <div className="ai-habit-card"><span>止损纪律</span><strong>{fmtPct(habit.indicators.stop_loss_discipline)}</strong></div>
-            <div className="ai-habit-card"><span>盈亏比</span><strong>{fmtNum(habit.indicators.profit_loss_ratio)}</strong></div>
-            <div className="ai-habit-card"><span>止盈过早/过晚比</span><strong>{fmtNum(habit.indicators.profit_taking_timing)}</strong></div>
-            <div className="ai-habit-card"><span>平均持仓 bars</span><strong>{fmtNum(habit.indicators.avg_holding_bars)}</strong></div>
-            <div className="ai-habit-card"><span>单笔仓位占比中位数</span><strong>{fmtPct(habit.indicators.avg_position_ratio)}</strong></div>
-            <div className="ai-habit-card">
-              <span>胜率 / 平均盈亏 / 最大回撤 / 连损场次</span>
-              <strong>
-                {fmtPct(habit.indicators.result_group.win_rate)} / {fmtPct(habit.indicators.result_group.avg_pnl_pct)} /{' '}
-                {fmtPct(habit.indicators.result_group.max_drawdown_pct)} / {habit.indicators.result_group.max_loss_streak}
-              </strong>
-            </div>
+            {INDICATOR_DOCS.map((doc) => {
+              const value = getIndicatorValue(habit.indicators, doc.key)
+              const isResultGroup = doc.group === '结果'
+              return (
+                <div
+                  key={doc.key}
+                  className={`ai-habit-card ai-habit-card--${doc.tone} ai-habit-card--group-${doc.group}`}
+                >
+                  <div className="ai-habit-card-head">
+                    <span className="ai-habit-card-label">{doc.label}</span>
+                    <InfoHover
+                      content={doc.tip}
+                      position="top"
+                      label={`${doc.label} 计算说明`}
+                    />
+                  </div>
+                  <strong className="ai-habit-card-value">
+                    {formatIndicator(value, doc.format)}
+                  </strong>
+                  {isResultGroup && <span className="ai-habit-card-sub">{doc.group}</span>}
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
