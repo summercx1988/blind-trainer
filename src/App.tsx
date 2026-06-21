@@ -163,7 +163,7 @@ function App() {
       <aside className="app-sidebar">
         <div className="app-brand">
           <span className="app-brand-badge">盘感训练</span>
-          <h1 onClick={() => { void navigateToModule('overview', false) }}>盲训工作台</h1>
+          <h1 onClick={() => { void navigateToModule('overview', false) }}>Blind Trainer</h1>
         </div>
 
         <nav className="app-nav" aria-label="主导航">
