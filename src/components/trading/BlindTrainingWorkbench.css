@@ -2035,7 +2035,8 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    padding-bottom: 72px; /* 给固定底部动作栏留空间 */
+    padding-bottom: max(72px, calc(72px + env(safe-area-inset-bottom))); /* 给固定底部动作栏留空间 + iOS home indicator */
+    padding-top: env(safe-area-inset-top); /* iOS 状态栏 */
   }
   .wt-session {
     flex: 1;
@@ -2051,6 +2052,7 @@
     background: var(--bg-elevated, #1a1a1a);
     border-top: 1px solid var(--border, #333);
     padding: 10px;
+    padding-bottom: max(10px, calc(10px + env(safe-area-inset-bottom))); /* iOS home indicator 偏移 */
     z-index: 100;
     display: flex;
     flex-direction: column;
@@ -2062,6 +2064,7 @@
     flex: 1;
     padding: 14px 0;
     font-size: 14px;
+    min-height: 44px; /* Apple HIG 最小触控目标 */
   }
   .wt-action-section .wt-shares-presets {
     margin-bottom: 0;
@@ -2069,12 +2072,14 @@
 }
 
 /* 横屏：左右分栏（左大图，右操作面板） */
-@media (orientation: landscape) and (max-width: 1024px) {
+@media (orientation: landscape) and (max-width: 1100px) {
   .wt-workbench {
     display: flex;
     flex-direction: row;
     gap: 8px;
     align-items: flex-start;
+    padding-top: env(safe-area-inset-top); /* iOS 状态栏 */
+    padding-bottom: env(safe-area-inset-bottom); /* iOS home indicator */
   }
   .wt-session {
     flex: 1;
@@ -2091,5 +2096,8 @@
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
+  }
+  .wt-action-section .wt-btn {
+    min-height: 44px; /* Apple HIG 最小触控目标 */
   }
 }
