@@ -177,7 +177,6 @@ export async function saveSession(input: SaveSessionInput): Promise<void> {
      input.interval_type, input.started_at, input.initial_capital,
      input.created_at, input.profile_id]
   )
-  await markTrained(input.stock_code, input.profile_id)
 }
 
 export async function markTrained(code: string, profileId: string): Promise<void> {
@@ -187,6 +186,14 @@ export async function markTrained(code: string, profileId: string): Promise<void
     [code, profileId, Math.floor(Date.now() / 1000)]
   )
   await persist()
+}
+
+function markTrainedSync(code: string, profileId: string): void {
+  const db = requireDb()
+  db.run(
+    `INSERT OR IGNORE INTO trained_stocks (code, profile_id, trained_at) VALUES (?, ?, ?)`,
+    [code, profileId, Math.floor(Date.now() / 1000)]
+  )
 }
 
 export async function getTrainedCodes(profileId: string): Promise<string[]> {
@@ -337,9 +344,9 @@ export async function finishSession(
   context?: FinishSessionContext
 ): Promise<FinishSessionResult> {
   const db = requireDb()
-  const session = queryOne<SessionRow & { profile_id: string }>(
+  const session = queryOne<SessionRow & { profile_id: string; stock_code: string }>(
     db,
-    'SELECT id, initial_capital, interval_type, profile_id, started_at, finished_at, status FROM training_sessions WHERE id = ? LIMIT 1',
+    'SELECT id, initial_capital, interval_type, profile_id, stock_code, started_at, finished_at, status FROM training_sessions WHERE id = ? LIMIT 1',
     [sessionId]
   )
   if (!session) return { success: false }
@@ -357,6 +364,9 @@ export async function finishSession(
   const review = recomputeAndSaveSessionReview(sessionId)
   const profileId = session.profile_id || context?.profileId || 'default'
   rebuildProfileAggregate(profileId)
+  if (session.stock_code) {
+    markTrainedSync(session.stock_code, profileId)
+  }
   await persist()
 
   return { success: true, review }

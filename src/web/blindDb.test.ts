@@ -37,7 +37,7 @@ describe('blindDb 盲训库管理', () => {
     expect(isBlindDbReady()).toBe(true)
   })
 
-  it('saveSession 后能查到该 session 关联的股票', async () => {
+  it('saveSession 不应立即标记为已训练（仅 start，训练未完成）', async () => {
     await saveSession({
       id: 'sess-1',
       sample_id: 'smp-1',
@@ -50,7 +50,27 @@ describe('blindDb 盲训库管理', () => {
       profile_id: 'default',
     })
     const trained = await getTrainedCodes('default')
-    expect(trained).toContain('600001')
+    expect(trained).not.toContain('600001')
+  })
+
+  it('finishSession 后才把 stock_code 写入 trained_stocks', async () => {
+    await saveSession({
+      id: 'sess-1',
+      sample_id: 'smp-1',
+      stock_code: '600003',
+      stock_name: '测试股票',
+      interval_type: '1d',
+      started_at: 1718000000,
+      initial_capital: 100000,
+      created_at: 1718000000,
+      profile_id: 'p-bug1',
+    })
+    expect(await getTrainedCodes('p-bug1')).not.toContain('600003')
+
+    await saveTradeAction({ sessionId: 'sess-1', barIndex: 0, actionType: 'hold', price: 10 })
+    await finishSession('sess-1', 100000, 0, { profileId: 'p-bug1' })
+
+    expect(await getTrainedCodes('p-bug1')).toContain('600003')
   })
 
   it('markTrained 独立标记已训练股', async () => {
