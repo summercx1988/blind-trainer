@@ -31,6 +31,15 @@ describe('webApi 抽象层', () => {
     expect(typeof first.klines[0].timestamp).toBe('number')
   })
 
+  it('data.getRandomSamples 接收 excludeRecent 参数不报错', async () => {
+    const samples = await api.data.getRandomSamples('mixed', '1d', 2, {
+      maxBarsPerSymbol: 260,
+      profileId: 'webapi-exclude-recent',
+      excludeRecent: 5,
+    })
+    expect(Array.isArray(samples)).toBe(true)
+  })
+
   it('profile.getActive 返回默认账户', async () => {
     const profile = await api.profile.getActive() as { id: string; name: string; current_capital: number }
     expect(profile).toBeTruthy()

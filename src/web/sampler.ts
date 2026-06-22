@@ -1,5 +1,5 @@
 import { getMarketDb } from './dbLoader'
-import { getTrainedCodes } from './blindDb'
+import { getTrainedCodes, getRecentTrainedCodes } from './blindDb'
 import type { Database } from 'sql.js'
 
 export interface NormalizedBar {
@@ -30,6 +30,7 @@ export interface GetSamplesOptions {
   profileId?: string
   candidateCount?: number
   minPrice?: number
+  excludeRecent?: number
 }
 
 const MIN_HISTORY_BARS = 50
@@ -52,12 +53,18 @@ export async function getRandomSamples(
     maxBarsPerSymbol = 260,
     profileId = 'default',
     minPrice = 0,
+    excludeRecent = 0,
   } = options
   const requestedCandidates = options.candidateCount ?? Math.max(count * 10, 80)
   const candidateLimit = Math.max(20, Math.min(2000, requestedCandidates))
   const actualMaxBars = Math.max(MIN_TOTAL_BARS + 20, Math.min(5000, Math.floor(maxBarsPerSymbol)))
 
-  const excludeCodes = new Set(await getTrainedCodes(profileId))
+  let excludeCodes: Set<string>
+  if (excludeRecent > 0) {
+    excludeCodes = new Set(await getRecentTrainedCodes(profileId, excludeRecent))
+  } else {
+    excludeCodes = new Set(await getTrainedCodes(profileId))
+  }
 
   const fetchLimit = candidateLimit + excludeCodes.size
   const candidateStmt = marketDb.prepare(

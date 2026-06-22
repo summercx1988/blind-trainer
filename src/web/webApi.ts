@@ -207,6 +207,7 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
           profileId: options?.profileId,
           candidateCount: options?.candidateCount,
           minPrice: options?.minPrice,
+          excludeRecent: options?.excludeRecent,
         })
         return samples.map(adaptSampleForWorkbench)
       },

@@ -183,7 +183,7 @@ export async function markTrained(code: string, profileId: string): Promise<void
   const db = requireDb()
   db.run(
     `INSERT OR IGNORE INTO trained_stocks (code, profile_id, trained_at) VALUES (?, ?, ?)`,
-    [code, profileId, Math.floor(Date.now() / 1000)]
+    [code, profileId, Date.now()]
   )
   await persist()
 }
@@ -192,7 +192,7 @@ function markTrainedSync(code: string, profileId: string): void {
   const db = requireDb()
   db.run(
     `INSERT OR IGNORE INTO trained_stocks (code, profile_id, trained_at) VALUES (?, ?, ?)`,
-    [code, profileId, Math.floor(Date.now() / 1000)]
+    [code, profileId, Date.now()]
   )
 }
 
@@ -202,6 +202,21 @@ export async function getTrainedCodes(profileId: string): Promise<string[]> {
     `SELECT code FROM trained_stocks WHERE profile_id = ? ORDER BY code`
   )
   stmt.bind([profileId])
+  const codes: string[] = []
+  while (stmt.step()) {
+    codes.push(stmt.getAsObject().code as string)
+  }
+  stmt.free()
+  return codes
+}
+
+export async function getRecentTrainedCodes(profileId: string, limit: number): Promise<string[]> {
+  if (limit <= 0) return []
+  const db = requireDb()
+  const stmt = db.prepare(
+    `SELECT code FROM trained_stocks WHERE profile_id = ? ORDER BY trained_at DESC LIMIT ?`
+  )
+  stmt.bind([profileId, limit])
   const codes: string[] = []
   while (stmt.step()) {
     codes.push(stmt.getAsObject().code as string)

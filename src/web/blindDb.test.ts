@@ -6,6 +6,7 @@ import {
   saveSession,
   markTrained,
   getTrainedCodes,
+  getRecentTrainedCodes,
   isBlindDbReady,
   saveTradeAction,
   finishSession,
@@ -84,6 +85,23 @@ describe('blindDb 盲训库管理', () => {
     await markTrained('600002', 'profileB')
     expect(await getTrainedCodes('profileA')).toEqual(['600001'])
     expect(await getTrainedCodes('profileB')).toEqual(['600002'])
+  })
+
+  it('getRecentTrainedCodes 按 trained_at 倒序取最近 N 个', async () => {
+    await markTrained('600010', 'default')
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await markTrained('600020', 'default')
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await markTrained('600030', 'default')
+
+    const recent = await getRecentTrainedCodes('default', 2)
+    expect(recent).toEqual(['600030', '600020'])
+  })
+
+  it('getRecentTrainedCodes limit=0 返回空数组', async () => {
+    await markTrained('600040', 'default')
+    const recent = await getRecentTrainedCodes('default', 0)
+    expect(recent).toEqual([])
   })
 
   it('持久化后重启能恢复（forceRefresh=false 从 IndexedDB 加载）', async () => {
