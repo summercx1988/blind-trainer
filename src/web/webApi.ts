@@ -215,11 +215,17 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
         const { queryStockList } = await import('./dbLoader')
         return queryStockList(limit)
       },
-      getKline: async (code: string, _period: string, limit: number) => {
+      getKline: async (code: string, period: string, limit: number) => {
+        if (period !== 'daily' && period !== '1d') {
+          throw new Error('PWA 模式仅支持日线（daily）周期')
+        }
         const { queryKline } = await import('./dbLoader')
         return queryKline(code, 'daily', limit)
       },
-      getCandles: async (code: string, _interval: string) => {
+      getCandles: async (code: string, interval: string) => {
+        if (interval !== 'daily' && interval !== '1d') {
+          throw new Error('PWA 模式仅支持日线（daily）周期')
+        }
         const { queryKline } = await import('./dbLoader')
         return queryKline(code, 'daily', 99999)
       },

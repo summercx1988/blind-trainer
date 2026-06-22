@@ -232,6 +232,15 @@ describe('webApi 端到端集成（训练→结算→复盘）', () => {
     expect(stats.stockCount).toBeGreaterThan(0)
     expect(stats.dailyCount).toBeGreaterThan(0)
   })
+
+  it('data.getKline 传入 15m 抛语义错误而非 dbLoader 内部错', async () => {
+    await expect(api.data.getKline('000021', '15m', 100)).rejects.toThrow(/PWA.*日线/)
+    await expect(api.data.getKline('000021', '1d', 100)).resolves.toBeInstanceOf(Array)
+  })
+
+  it('data.getCandles 传入 5m 抛语义错误', async () => {
+    await expect(api.data.getCandles('000021', '5m')).rejects.toThrow(/PWA.*日线/)
+  })
 })
 
 describe('webApi data 同步/补录/重建（Web 版不支持）', () => {
