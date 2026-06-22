@@ -191,6 +191,17 @@ describe('webApi 端到端集成（训练→结算→复盘）', () => {
     expect(candles.length).toBeGreaterThan(0)
     expect(typeof candles[0].close).toBe('number')
   })
+
+  it('data.getStats 返回非零 stockCount/dailyCount（基于 builtin seed 真实聚合）', async () => {
+    const stats = await api.data.getStats() as {
+      stockCount: number
+      dailyCount: number
+      m15Count: number
+      m5Count: number
+    }
+    expect(stats.stockCount).toBeGreaterThan(0)
+    expect(stats.dailyCount).toBeGreaterThan(0)
+  })
 })
 
 describe('webApi data 同步/补录/重建（Web 版不支持）', () => {

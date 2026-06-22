@@ -217,7 +217,22 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
         const { queryKline } = await import('./dbLoader')
         return queryKline(code, 'daily', 99999)
       },
-      getStats: async () => ({ stockCount: 0, dailyCount: 0, m15Count: 0, m5Count: 0 }),
+      getStats: async () => {
+        const { queryStockList, queryKline } = await import('./dbLoader')
+        const stocks = await queryStockList(99999)
+        const sampled = stocks.slice(0, 50)
+        const perStockRows = await Promise.all(
+          sampled.map((s) => queryKline(String(s.code), 'daily', 99999))
+        )
+        const sampledDaily = perStockRows.reduce((sum, rows) => sum + rows.length, 0)
+        const avgPerStock = sampled.length > 0 ? sampledDaily / sampled.length : 0
+        return {
+          stockCount: stocks.length,
+          dailyCount: Math.round(stocks.length * avgPerStock),
+          m15Count: 0,
+          m5Count: 0,
+        }
+      },
       init: async () => ({ success: true, data: { stockList: null, dailySynced: 0, dailyFailed: 0 }, error: null, code: null }),
 
       getAutoSyncStatus: async () => ({
