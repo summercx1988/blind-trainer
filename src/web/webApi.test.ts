@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import fakeIndexedDB from 'fake-indexeddb'
 import { createWebApi } from './webApi'
+import * as blindDbModule from './blindDb'
 
 ;(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
 
@@ -50,6 +51,26 @@ describe('webApi 抽象层', () => {
     }) as { id: string }
     expect(result).toBeTruthy()
     expect(typeof result.id).toBe('string')
+  })
+
+  it('db.saveSession 异常时返回带 error 字段的结果（不抛）', async () => {
+    const spy = vi.spyOn(blindDbModule, 'saveSession').mockRejectedValueOnce(new Error('mocked IDB quota exceeded'))
+    try {
+      const result = await api.db.saveSession({
+        sampleId: 'smp-err',
+        stockCode: '600001',
+        stockName: '测试',
+        intervalType: '1d',
+        startedAt: Date.now(),
+        initialCapital: 100000,
+        profileId: 'webapi-save-err',
+      }) as { id: string; error?: string }
+      expect(result.id).toBe('')
+      expect(typeof result.error).toBe('string')
+      expect(result.error).toMatch(/IDB|quota/)
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('db.finishSession 对不存在的 session 返回 success:false', async () => {

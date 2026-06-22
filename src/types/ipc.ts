@@ -17,6 +17,7 @@ export interface SaveSessionInput {
 
 export interface SaveSessionResult extends SaveSessionInput {
   id: string
+  error?: string
 }
 
 export interface FinishSessionContext {

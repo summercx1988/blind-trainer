@@ -21,6 +21,7 @@ import type {
   PlatformResult,
   SessionFinishData,
   ProfileDeleteData,
+  SaveSessionResult,
 } from '../types/ipc'
 
 export interface WebApiInitOptions {
@@ -69,20 +70,24 @@ export function createWebApi(initOptions: WebApiInitOptions = {}) {
         startedAt: number
         initialCapital: number
         profileId?: string
-      }) => {
+      }): Promise<SaveSessionResult> => {
         const id = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-        await blindSaveSession({
-          id,
-          sample_id: session.sampleId,
-          stock_code: session.stockCode,
-          stock_name: session.stockName,
-          interval_type: session.intervalType,
-          started_at: session.startedAt,
-          initial_capital: session.initialCapital,
-          created_at: Date.now(),
-          profile_id: session.profileId || 'default',
-        })
-        return { id, ...session }
+        try {
+          await blindSaveSession({
+            id,
+            sample_id: session.sampleId,
+            stock_code: session.stockCode,
+            stock_name: session.stockName,
+            interval_type: session.intervalType,
+            started_at: session.startedAt,
+            initial_capital: session.initialCapital,
+            created_at: Date.now(),
+            profile_id: session.profileId || 'default',
+          })
+          return { id, ...session }
+        } catch (err) {
+          return { id: '', ...session, error: String(err) }
+        }
       },
 
       finishSession: async (
