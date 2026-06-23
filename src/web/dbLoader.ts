@@ -1,4 +1,7 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
+// vite ?url: 把 wasm 路径解析成 dev/build 时的实际 URL
+// 测试环境（vitest + jsdom）下会拿到 file:// 路径，因此测试需要覆盖 locateFile
+import wasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url'
 import { saveSnapshot, loadSnapshot } from './idb'
 
 const IDB_NAME = 'blind-trainer'
@@ -15,7 +18,7 @@ export interface InitOptions {
   packUrl?: string
   /** 强制重新 fetch，忽略 IndexedDB 缓存 */
   forceRefresh?: boolean
-  /** sql.js wasm 文件定位函数，默认指向 /（public 根）。测试可覆盖为 file:// 路径 */
+  /** sql.js wasm 文件定位函数，默认指向 vite ?url 解析的 sql-wasm-browser.wasm 路径。测试可覆盖为 file:// 路径 */
   locateFile?: (file: string) => string
 }
 
@@ -29,7 +32,7 @@ export async function initDb(options: InitOptions = {}): Promise<void> {
     packData,
     packUrl = '/data/builtin-100.sqlite',
     forceRefresh = false,
-    locateFile = (file: string) => `/${file}`,
+    locateFile = (file: string) => (file.endsWith('.wasm') ? wasmUrl : `/${file}`),
   } = options
 
   if (!SQL) {

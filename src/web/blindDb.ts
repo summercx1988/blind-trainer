@@ -1,4 +1,5 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
+import wasmUrl from 'sql.js/dist/sql-wasm-browser.wasm?url'
 import { saveSnapshot, loadSnapshot } from './idb'
 import { calculateSessionReviewMetrics } from '../main/sessionReview'
 import type {
@@ -37,7 +38,7 @@ export interface SaveSessionInput {
 }
 
 export async function initBlindDb(options: BlindInitOptions = {}): Promise<void> {
-  const { forceRefresh = false, locateFile = (file: string) => `/${file}` } = options
+  const { forceRefresh = false, locateFile = (file: string) => (file.endsWith('.wasm') ? wasmUrl : `/${file}`) } = options
 
   if (!SQL) {
     SQL = await initSqlJs({ locateFile })

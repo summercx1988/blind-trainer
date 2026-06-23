@@ -55,4 +55,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  assetsInclude: ['**/*.wasm'],
+  optimizeDeps: {
+    exclude: ['sql.js'],
+  },
 })
