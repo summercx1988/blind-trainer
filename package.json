@@ -14,8 +14,8 @@
     "electron:dev": "vite --mode electron",
     "electron:build": "vite build --mode electron && electron-builder",
     "cf:login": "wrangler login",
-    "cf:deploy": "npm run build && wrangler pages deploy dist --project-name=blind-trainer",
-    "cf:preview": "npm run build && wrangler pages deploy dist --project-name=blind-trainer --branch=preview"
+    "cf:deploy": "npm run build && wrangler pages deploy dist --project-name=blind-trainer-pwa",
+    "cf:preview": "npm run build && wrangler pages deploy dist --project-name=blind-trainer-pwa --branch=preview"
   },
   "main": "dist-electron/index.cjs",
   "dependencies": {

@@ -28,7 +28,7 @@ npm run cf:deploy
 - `Create Pages project?` → **Y**
 - `Production branch name` → **mobile**
 
-完成后输出 `https://blind-trainer.pages.dev`（或自定义域名）。
+完成后输出 `https://blind-trainer-pwa.pages.dev`（或自定义域名）。
 
 ### 后续更新
 
