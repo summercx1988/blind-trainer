@@ -111,6 +111,21 @@ const resolveSeedDbPath = (): string | null => {
 }
 
 const CURRENT_SEED_VERSION = 2
+const MAX_PRE_SEED_BACKUPS = 3
+
+const prunePreSeedBackups = (dbDir: string): void => {
+  try {
+    const entries = fs.readdirSync(dbDir)
+      .filter((name) => /^pre-seed-upgrade-\d+\.db$/.test(name))
+      .map((name) => ({ name, mtime: fs.statSync(path.join(dbDir, name)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime)
+    for (const entry of entries.slice(MAX_PRE_SEED_BACKUPS)) {
+      try { fs.unlinkSync(path.join(dbDir, entry.name)) } catch { /* ignore */ }
+    }
+  } catch (error) {
+    log.warn('[Init] Failed to prune pre-seed backups:', error)
+  }
+}
 
 
 const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
@@ -134,7 +149,7 @@ const needsSeedUpgrade = (): { needed: boolean; reason: string } => {
     const seedStat = fs.statSync(seedPath)
     const seedVersion = `${CURRENT_SEED_VERSION}_${seedStat.size}`
     try {
-      const metaRow = db.prepare("SELECT summary_json as value FROM dataset_policy_evaluations WHERE id = 'seed_version_meta'").get() as { value?: string } | undefined
+      const metaRow = db.prepare("SELECT value_json as value FROM app_preferences WHERE key = 'seed_version'").get() as { value?: string } | undefined
       if (!metaRow || metaRow.value !== seedVersion) {
         return { needed: true, reason: `version_mismatch` }
       }
@@ -154,11 +169,13 @@ const performSeedUpgrade = (seedPath: string): void => {
 
   log.info(`[Init] Upgrading seed DB from ${seedPath} (${(seedStat.size / 1024 / 1024).toFixed(1)} MB)...`)
   closeDb()
+  const dbDir = path.dirname(getDbPath())
   if (fs.existsSync(getDbPath())) {
     try {
-      const backupPath = path.join(path.dirname(getDbPath()), `pre-seed-upgrade-${Date.now()}.db`)
+      const backupPath = path.join(dbDir, `pre-seed-upgrade-${Date.now()}.db`)
       fs.copyFileSync(getDbPath(), backupPath)
       log.info(`[Init] Existing DB backup created: ${backupPath}`)
+      prunePreSeedBackups(dbDir)
     } catch (error) {
       log.warn('[Init] Failed to create pre-seed backup:', error)
     }
@@ -171,9 +188,11 @@ const performSeedUpgrade = (seedPath: string): void => {
 
   const db = getDb()
   try {
-    db.prepare("INSERT OR REPLACE INTO dataset_policy_evaluations (id, mode, summary_json, created_at) VALUES ('seed_version_meta', 'seed', ?, strftime('%s','now'))").run(seedVersion)
+    db.prepare("INSERT OR REPLACE INTO app_preferences (key, value_json, updated_at) VALUES ('seed_version', ?, strftime('%s','now'))").run(seedVersion)
     log.info(`[Init] Seed version ${seedVersion} recorded.`)
-  } catch { /* ignore meta write failure */ }
+  } catch (error) {
+    log.error('[Init] Failed to record seed version — next launch will re-trigger upgrade:', error)
+  }
 }
 
 const runNetworkInit = async (): Promise<void> => {
