@@ -156,6 +156,9 @@ function createTables(db: Database): void {
 async function persist(): Promise<void> {
   if (!blindDb) return
   const data = blindDb.export()
+  if (data.length > 256 * 1024) {
+    console.warn(`[blindDb] snapshot ${data.length} bytes exceeds 256KB, consider debouncing persist()`)
+  }
   await saveSnapshot(IDB_NAME, IDB_STORE, IDB_KEY, data)
 }
 
